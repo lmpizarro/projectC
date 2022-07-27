@@ -110,20 +110,16 @@ def min_var(symbols, df):
         a = get_matrix(symbols, sample=row)
         data.append(np.matmul(w, np.matmul(a, w)))
 
-        s_var = (1/row[[e+'_var' for e in symbols]]).sum()
+        s_var = (1/row[[e+'_ewma' for e in symbols]]).sum()
         if s_var != 0:
-            whts = [(1/row[e+'_var'])/s_var for e in symbols if s_var != 0 and row[e+'_var'] != 0]
+            whts = [(1/row[e+'_ewma'])/s_var for e in symbols if s_var != 0 and row[e+'_ewma'] != 0]
         if len(whts) == len(symbols):
             w = np.array(whts)
         
             diff_ = np.abs(w - w_old).sum()
             if diff_ > 0.05:
-
                 w_old = w
-                print(np.round(w,2), index)
-                N = N + 1
-            
-    print(N, len(df))        
+                N = N + 1  
 
     df['port1'] = np.array(data)
     plt.plot(df['port1'])
@@ -245,7 +241,7 @@ def control_var_key(symbol, df):
 
 np.random.seed(1)
 symbols = ['KO', 'PEP', 'PG', 'AAPL', 'JNJ', 'AMZN', 'DE', 'CAT', 'META', 'MSFT', 'ADI']
-symbols = ['KO', 'PEP']
+symbols = ['KO', 'PEP', 'PG']
 
 equal_weights = np.array([1/len(symbols)] * len(symbols))
 
@@ -260,6 +256,8 @@ df_rets = calc_matrix(symbols, df, lmbd, ewma=ewma)
 print(df_prices.tail())
 plot_stacked(symbols, df_rets, '_filt')
 plot_stacked(symbols, df_rets, '_ewma')
+
+min_var(symbols,df)
 
 exit()
 
