@@ -1,94 +1,9 @@
 import yfinance as yf
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.signal import hilbert
-from sklearn.linear_model import LinearRegression
 import pandas as pd
-import scipy.signal as signal
 from denoisers.wavelet.denoise import deno_wvlt
-
-'''
-    ff = scipy.fft.fft((np.asarray(df.DIFCCL))[128:256])
-    plt.plot(np.abs(ff)[2:64])
-'''
-
-def populate(symbol, b=2, period=20, key='Adj Close'):
-    
-    symbols = [symbol]
-    fs = 250
-
-    df = yf.download(symbols, '2015-2-1', '2022-03-07')
-
-    print(df.tail())
-
-    sos_fast = signal.butter(1, 4, 'lp', fs=fs, output='sos')
-    sos_slow = signal.butter(1, 1, 'lp', fs=fs, output='sos')
-    sos_bp = signal.butter(1, [8,12], 'bandpass', fs=250, output='sos')
-    df['fast_ccl'] = signal.sosfiltfilt(sos_fast, df[key])
-    df['slow_ccl'] = signal.sosfiltfilt(sos_slow, df[key])
-    df['bp_ccl'] = signal.sosfiltfilt(sos_bp, df[key])
-    df['bp_diff'] = df['bp_ccl'].diff(1)
-
-    max_bp = df.bp_ccl.max()
-    max_dbp = df.bp_diff.max()
-    df.bp_diff = max_bp * df.bp_diff / max_dbp
-    
-    an_sig = hilbert(df['bp_ccl'])
-    df['envelope'] = np.abs(an_sig)
-    df['phase'] = np.unwrap(np.angle(an_sig))
-    df['frequency'] = df['phase'].shift() / ((2.0*np.pi) * fs)
-
-    X = np.asarray(range(0, len(df.phase))).reshape(-1, 1)
-    reg = LinearRegression().fit(X, df['phase'])
-
-    pred = reg.predict(X)
-    df.phase = df.phase - pred
-
-    df.dropna(inplace=True)
-
-    plt.plot(df[key])
-    plt.plot(df['slow_ccl'])
-    plt.plot(df.bp_ccl + df['slow_ccl'])
-    plt.show()
-
-    plt.grid()
-    plt.plot(df.bp_ccl)
-    plt.plot(df.bp_diff, 'r')
-    #plt.plot(10*np.diff(np.diff(np.asarray(df.bp_ccl))))
-    plt.plot(df.envelope, 'g')
-    plt.plot(-df.envelope, 'g')
-    plt.show()
-
-    # plt.grid()
-    # plt.plot(8*df.envelope + df.slow_ccl)
-    # plt.plot(df.slow_ccl - 8*df.envelope  )
-    # plt.plot(df.slow_ccl)
-    # plt.plot(df[key])
-
-    # plt.plot(df.bp_ccl +df.slow_ccl, 'k')
-    # plt.plot(df.bp2_ccl+ df.slow_ccl)
-    # plt.plot(df[key])
-    # plt.plot(df.slow_ccl)
-    # plt.show()
-
-    import scipy
-    ff = scipy.fft.fft((np.asarray(df.bp_ccl)))
-    plt.plot(np.abs(ff)[:250])
-    plt.show()
-    return df
-
-def deno_filter(symbols, df, zero=0.00001):
-    fs = 250
-    for s in symbols:
-        key = s + '_deno'
-        for i in range(1, fs//2 - 1):
-            sos_smooth_close = signal.butter(1, i, 'lp', fs=fs, output='sos')
-            sig = signal.sosfiltfilt(sos_smooth_close, df[s])
-            if np.power((df[s] - sig).mean(), 2) < zero:
-                break
-        df[key] = sig
-    return df
-
+from denoisers.butter.filter import min_lp
 
 def plot_stacked(df):
     fig, axs = plt.subplots(len(symbols))
@@ -120,6 +35,19 @@ def calc_var(symbols, df, lmbd=.99, ewma=True):
         
     return df
 
+def calc_cross(symbols, df, lmbd=.99, ewma=True):
+    for i in range(len(symbols)):
+        for j in range(i+1, len(symbols)):
+            s1 = symbols[i]
+            s2 = symbols[j]
+            key = f'{s1}_{s2}'
+            df[key] = df[s1+'_deno'] * df[s2+'_deno']
+
+            df[key] = df[key].ewm(alpha=1-lmbd).mean()
+            if not ewma:
+                df[key] -= (df[key]).ewm(alpha=1-lmbd).mean()
+    return df
+
 def get_cross_var_keys(symbols):
     keys = []
     for i in range(len(symbols)):
@@ -143,19 +71,6 @@ def get_return_keys(symbols):
         keys.append(s)
     return keys
  
-def calc_cross(symbols, df, lmbd=.99, ewma=True):
-    for i in range(len(symbols)):
-        for j in range(i+1, len(symbols)):
-            s1 = symbols[i]
-            s2 = symbols[j]
-            key = f'{s1}_{s2}'
-            df[key] = df[s1+'_deno'] * df[s2+'_deno']
-
-            df[key] = df[key].ewm(alpha=1-lmbd).mean()
-            if not ewma:
-                df[key] -= (df[key]).ewm(alpha=1-lmbd).mean()
-    return df
-
 def get_matrix(symbols, sample):
     a = np.zeros(len(symbols)*len(symbols))
     a = a.reshape(len(symbols), len(symbols))
@@ -166,7 +81,6 @@ def get_matrix(symbols, sample):
             key = f'{symbols[i]}_{symbols[j]}'
             a[i,j] = sample[key] 
             a[j,i] = sample[key]
-    
     return a
 
 def min_var(symbols, df):
@@ -251,8 +165,6 @@ def weights_func(size):
 
     return w, wc
 
-
-
 def max_sharpe(symbols, df, rfr=0.0001, r=False):
     np.random.seed(1)
     N_index = 0
@@ -324,6 +236,7 @@ df = yf.download(symbols, '2015-2-1')['Adj Close']
 
 
 deno_wvlt(symbols, df)
+min_lp(symbols, df)
 
 for s in symbols:
 
