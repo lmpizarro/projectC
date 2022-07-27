@@ -2,8 +2,6 @@ import yfinance as yf
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-from denoisers.wavelet.denoise import deno_wvlt
-from denoisers.butter.filter import min_lp
 
 def plot_stacked(df):
     fig, axs = plt.subplots(len(symbols))
@@ -234,19 +232,6 @@ equal_weights = np.array([1/len(symbols)] * len(symbols))
 
 df = yf.download(symbols, '2015-2-1')['Adj Close']
 
-
-deno_wvlt(symbols, df)
-min_lp(symbols, df)
-
-for s in symbols:
-
-    plt.plot(df[s+'_deno'])
-    plt.show()
-    noise = df[s]- df[s+'_deno']
-    plt.plot(noise)
-    plt.show()
-    plt.hist(noise, bins=50)
-    plt.show()
 
 
 lmbd = .90

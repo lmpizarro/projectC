@@ -11,7 +11,7 @@ import yfinance as yf
     plt.plot(np.abs(ff)[2:64])
 '''
 
-def populate(symbols, df, key='Adj Close'):
+def filter(symbols, df, key='Adj Close'):
     fs = 250
 
     for key in symbols:
@@ -69,9 +69,9 @@ def populate(symbols, df, key='Adj Close'):
         plt.show()
     return df
 
-symbols = ['KO', 'PG']
+if __name__ == '__main__':
+    symbols = ['KO', 'PG', 'PEP']
 
-df = yf.download(symbols, '2015-2-1', '2022-03-07')['Adj Close']
+    df = yf.download(symbols, '2015-2-1', '2022-03-07')['Adj Close']
 
-
-df = populate(symbols, df)
+    df = filter(symbols, df)
