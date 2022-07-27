@@ -100,7 +100,7 @@ def get_matrix(symbols, sample):
             a[j,i] = sample[key]
     return a
 
-def min_var(symbols, df):
+def min_ewma_port(symbols, df):
     data = []
     w_old = np.zeros(len(symbols))
     N = 0
@@ -121,9 +121,9 @@ def min_var(symbols, df):
                 w_old = w
                 N = N + 1  
 
-    df['port1'] = np.array(data)
-    plt.plot(df['port1'])
-    plt.show()
+    df['ewma_port'] = np.array(data)
+
+    return df, w
 
 rf = 0.015
 
@@ -241,7 +241,7 @@ def control_var_key(symbol, df):
 
 np.random.seed(1)
 symbols = ['KO', 'PEP', 'PG', 'AAPL', 'JNJ', 'AMZN', 'DE', 'CAT', 'META', 'MSFT', 'ADI']
-symbols = ['KO', 'PEP', 'PG']
+symbols = ['PG', 'PEP', 'AAPL']
 
 equal_weights = np.array([1/len(symbols)] * len(symbols))
 
@@ -254,10 +254,17 @@ ewma = False
 df_rets = calc_matrix(symbols, df, lmbd, ewma=ewma)
 
 print(df_prices.tail())
+print(df_rets.tail())
+
 plot_stacked(symbols, df_rets, '_filt')
 plot_stacked(symbols, df_rets, '_ewma')
 
-min_var(symbols,df)
+df, w = min_ewma_port(symbols,df)
+plt.plot(df['ewma_port'])
+plt.show()
+
+print(w)
+
 
 exit()
 
