@@ -2,6 +2,7 @@ import yfinance as yf
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+import copy
 
 def plot_stacked(df):
     fig, axs = plt.subplots(len(symbols))
@@ -15,13 +16,15 @@ def plot_stacked(df):
 
     plt.show()
 
-def calc_var(symbols, df, lmbd=.99, ewma=True):
+def calc_var(symbols, df, lmbd=.99, ewma=True, deno=False):
     for s in symbols:
         key_var = s + '_var'
         key_ewma = s + '_ewm'
         key_csum = s + '_csum'
 
-        s = s + '_deno'
+        if deno:
+            s = s + '_deno'
+
         df[s] = np.log(df[s]/df[s].shift(1))
         df[key_ewma] = df[s].ewm(alpha=1-lmbd).mean()
         
@@ -33,13 +36,16 @@ def calc_var(symbols, df, lmbd=.99, ewma=True):
         
     return df
 
-def calc_cross(symbols, df, lmbd=.99, ewma=True):
+def calc_cross(symbols, df, lmbd=.99, ewma=True, deno=False):
     for i in range(len(symbols)):
         for j in range(i+1, len(symbols)):
             s1 = symbols[i]
             s2 = symbols[j]
             key = f'{s1}_{s2}'
-            df[key] = df[s1+'_deno'] * df[s2+'_deno']
+            if deno:
+                df[key] = df[s1+'_deno'] * df[s2+'_deno']
+            else:
+                df[key] = df[s1] * df[s2]
 
             df[key] = df[key].ewm(alpha=1-lmbd).mean()
             if not ewma:
@@ -231,25 +237,21 @@ symbols = ['KO', 'PEP']
 equal_weights = np.array([1/len(symbols)] * len(symbols))
 
 df = yf.download(symbols, '2015-2-1')['Adj Close']
-
-
+df_prices = copy.deepcopy(df)
 
 lmbd = .90
 ewma = False
-df = calc_var(symbols, df, lmbd, ewma=ewma)
-df.fillna(0, inplace=True)
-df = calc_cross(symbols, df, lmbd, ewma=ewma)
-df.fillna(0, inplace=True)
+df_rets = calc_var(symbols, df, lmbd, ewma=ewma)
+df_rets.fillna(0, inplace=True)
+df_rets = calc_cross(symbols, df, lmbd, ewma=ewma)
+df_rets.fillna(0, inplace=True)
 
-print(df.tail())
+print(df_prices.tail())
 
-# deno_wvlt(symbols, df)
 
 for s in symbols:
 
-    plt.plot(df[s+'_deno'])
-    plt.show()
-    plt.plot(df[s+'_csum'])
+    plt.plot(df_rets[s+'_csum'])
     plt.show()
 
 exit()
