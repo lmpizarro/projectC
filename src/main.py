@@ -5,24 +5,38 @@ import pandas as pd
 import copy
 from plot.ploter import plot_stacked
 
-
-def calc_var(symbols, df, lmbd=.99, ewma=True, deno=False):
+def calc_returns(symbols, df, deno=False):
     for s in symbols:
-        key_var = s + '_var'
-        key_ewma = s + '_ewm'
-        key_csum = s + '_csum'
-
         if deno:
-            s = s + '_deno'
+            pass
 
         df[s] = np.log(df[s]/df[s].shift(1))
-        df[key_ewma] = df[s].ewm(alpha=1-lmbd).mean()
-        
-        df[key_var] = (df[s]**2).ewm(alpha=1-lmbd).mean()
-        if not ewma:        
-            df[key_var] -= df[key_ewma]**2 
-        
+    
+    df.fillna(0, inplace=True)
+    return df
+
+def calc_csum(symbols, df):
+    for s in symbols:
+        key_csum = s + '_csum'
         df[key_csum] = df[s].cumsum()
+
+    df.fillna(0, inplace=True)
+
+    return df
+
+def calc_var(symbols, df, lmbd=.99, ewma=True):
+    for s in symbols:
+        key_filt = s + '_filt'
+        key_ewma = s + '_ewma'
+
+        # filtered returns
+        df[key_filt] = df[s].ewm(alpha=1-lmbd).mean()
+
+        # ec cc 21        
+        df[key_ewma] = (df[s]**2).ewm(alpha=1-lmbd).mean()
+        if not ewma:        
+            df[key_ewma] -= df[key_filt]**2 
+        
         
     df.fillna(0, inplace=True)
     return df
@@ -45,8 +59,9 @@ def calc_cross(symbols, df, lmbd=.99, ewma=True, deno=False):
     return df
 
 
-def calc_matrix(symbols, df, lmbd, ewma=True):
-    df_rets = calc_var(symbols, df, lmbd, ewma=ewma)
+def calc_matrix(symbols, df, lmbd, ewma=True, deno=False):
+    df_rets = calc_returns(symbols, df, deno)
+    df_rets = calc_var(symbols, df_rets, lmbd, ewma=ewma)
     df_rets = calc_cross(symbols, df_rets, lmbd, ewma=ewma)
     return df_rets
 
@@ -237,14 +252,14 @@ equal_weights = np.array([1/len(symbols)] * len(symbols))
 df = yf.download(symbols, '2015-2-1')['Adj Close']
 df_prices = copy.deepcopy(df)
 
-lmbd = .90
+lmbd = .94
 ewma = False
 
 df_rets = calc_matrix(symbols, df, lmbd, ewma=ewma)
 
 print(df_prices.tail())
-plot_stacked(symbols, df_rets)
-plot_stacked(symbols, df_rets, '_ewm')
+plot_stacked(symbols, df_rets, '_filt')
+plot_stacked(symbols, df_rets, '_ewma')
 
 exit()
 
