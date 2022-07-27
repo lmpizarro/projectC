@@ -5,7 +5,7 @@ from scipy.signal import hilbert
 from sklearn.linear_model import LinearRegression
 import pandas as pd
 import scipy.signal as signal
-from denoisers.wavelet import deno_wvlt
+from denoisers.wavelet.denoise import deno_wvlt
 
 '''
     ff = scipy.fft.fft((np.asarray(df.DIFCCL))[128:256])
