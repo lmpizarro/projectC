@@ -100,6 +100,18 @@ def get_matrix(symbols, sample):
             a[j,i] = sample[key]
     return a
 
+def equal_weight_port(symbols, df):
+    data = []
+    w = np.array([1/len(symbols)] * len(symbols))
+    for _, row in df.iterrows():
+
+        a = get_matrix(symbols, sample=row)
+        data.append(np.matmul(w, np.matmul(a, w)))
+
+    df['equal_port'] = np.array(data)
+
+    return df, w
+
 def min_ewma_port(symbols, df):
     data = []
     w_old = np.zeros(len(symbols))
@@ -224,7 +236,7 @@ def max_sharpe(symbols, df, rfr=0.0001, r=False):
 
 def control_var(symbols, df):
     keys = get_cross_var_keys(symbols)
-    keys.extend(get_var_keys(symbols))
+    keys.extend(get_ewma_keys(symbols))
     s = df[keys].sum(axis=1)
     f_ema = (s).ewm(span=15).mean()
     s_ema = s.ewm(span=150).mean()
@@ -260,10 +272,13 @@ plot_stacked(symbols, df_rets, '_filt')
 plot_stacked(symbols, df_rets, '_ewma')
 
 df, w = min_ewma_port(symbols,df)
+df, w1 = equal_weight_port(symbols,df)
+print(w, w1)
 plt.plot(df['ewma_port'])
+plt.plot(df['equal_port'], 'k')
+
 plt.show()
 
-print(w)
 
 
 exit()
