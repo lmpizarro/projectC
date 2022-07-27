@@ -75,10 +75,10 @@ def get_cross_var_keys(symbols):
             keys.append(key)
     return keys
 
-def get_var_keys(symbols):
+def get_ewma_keys(symbols):
     keys = []
     for s in symbols:
-        key_var = s + '_var'
+        key_var = s + '_ewma'
         keys.append(key_var)
     return keys
 
@@ -92,7 +92,7 @@ def get_matrix(symbols, sample):
     a = np.zeros(len(symbols)*len(symbols))
     a = a.reshape(len(symbols), len(symbols))
     for i in range(len(symbols)):
-        key = f'{symbols[i]}_var'
+        key = f'{symbols[i]}_ewma'
         a[i,i] = sample[key]
         for j in range(i+1, len(symbols)):
             key = f'{symbols[i]}_{symbols[j]}'
