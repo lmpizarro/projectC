@@ -3,18 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import copy
+from plot.ploter import plot_stacked
 
-def plot_stacked(df):
-    fig, axs = plt.subplots(len(symbols))
-    fig.suptitle('Vertically stacked subplots')
-
-    for i in range(len(symbols)):
-        key = symbols[i] + '_var'
-        axs[i].plot(df[key])
-        axs[i].yaxis.set_label_position("right")
-        axs[i].set_ylabel(symbols[i])
-
-    plt.show()
 
 def calc_var(symbols, df, lmbd=.99, ewma=True, deno=False):
     for s in symbols:
@@ -34,6 +24,7 @@ def calc_var(symbols, df, lmbd=.99, ewma=True, deno=False):
         
         df[key_csum] = df[s].cumsum()
         
+    df.fillna(0, inplace=True)
     return df
 
 def calc_cross(symbols, df, lmbd=.99, ewma=True, deno=False):
@@ -50,7 +41,14 @@ def calc_cross(symbols, df, lmbd=.99, ewma=True, deno=False):
             df[key] = df[key].ewm(alpha=1-lmbd).mean()
             if not ewma:
                 df[key] -= (df[key]).ewm(alpha=1-lmbd).mean()
+    df.fillna(0, inplace=True)
     return df
+
+
+def calc_matrix(symbols, df, lmbd, ewma=True):
+    df_rets = calc_var(symbols, df, lmbd, ewma=ewma)
+    df_rets = calc_cross(symbols, df_rets, lmbd, ewma=ewma)
+    return df_rets
 
 def get_cross_var_keys(symbols):
     keys = []
@@ -241,18 +239,12 @@ df_prices = copy.deepcopy(df)
 
 lmbd = .90
 ewma = False
-df_rets = calc_var(symbols, df, lmbd, ewma=ewma)
-df_rets.fillna(0, inplace=True)
-df_rets = calc_cross(symbols, df, lmbd, ewma=ewma)
-df_rets.fillna(0, inplace=True)
+
+df_rets = calc_matrix(symbols, df, lmbd, ewma=ewma)
 
 print(df_prices.tail())
-
-
-for s in symbols:
-
-    plt.plot(df_rets[s+'_csum'])
-    plt.show()
+plot_stacked(symbols, df_rets)
+plot_stacked(symbols, df_rets, '_ewm')
 
 exit()
 
