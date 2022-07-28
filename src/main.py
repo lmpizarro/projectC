@@ -152,7 +152,7 @@ plt.plot(df['equal_port'], 'k')
 
 plt.show()
 
-plt.plot(df['rela'])
+plt.plot(df['equal_rela'].cumsum())
 plt.show()
 
 

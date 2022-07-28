@@ -23,6 +23,15 @@ def get_return_keys(symbols):
     for s in symbols:
         keys.append(s)
     return keys
+
+def get_filt_keys(symbols):
+    keys = []
+    for s in symbols:
+        key_var = s + '_filt'
+        keys.append(key_var)
+    return keys
+
+    
  
 def get_matrix(symbols, row_item):
     a = np.zeros(len(symbols)*len(symbols))
@@ -40,7 +49,7 @@ def equal_weight_port(symbols, df, name='equal'):
     df = csum(symbols, df)
     data_risk = []
     data_rel = []
-    ret_keys = get_return_keys(symbols)
+    ret_keys = get_filt_keys(symbols)
     rets = df[ret_keys]
 
     w = np.array([1/len(symbols)] * len(symbols))
@@ -53,7 +62,7 @@ def equal_weight_port(symbols, df, name='equal'):
         data_rel.append(return_ / risk)
 
     df[f'{name}_port'] = np.array(data_risk)
-    df['rela'] = np.array(data_rel)
+    df[f'{name}_rela'] = np.array(data_rel)
 
     return df, w
 
