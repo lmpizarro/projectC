@@ -4,66 +4,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import copy
 from plot.ploter import plot_stacked
-
-def calc_returns(symbols, df, deno=False):
-    for s in symbols:
-        if deno:
-            pass
-
-        df[s] = np.log(df[s]/df[s].shift(1))
-    
-    df.fillna(0, inplace=True)
-    return df
-
-def calc_csum(symbols, df):
-    for s in symbols:
-        key_csum = s + '_csum'
-        df[key_csum] = df[s].cumsum()
-
-    df.fillna(0, inplace=True)
-
-    return df
-
-def calc_var(symbols, df, lmbd=.99, ewma=True):
-    for s in symbols:
-        key_filt = s + '_filt'
-        key_ewma = s + '_ewma'
-
-        # filtered returns
-        df[key_filt] = df[s].ewm(alpha=1-lmbd).mean()
-
-        # ec cc 21        
-        df[key_ewma] = (df[s]**2).ewm(alpha=1-lmbd).mean()
-        if not ewma:        
-            df[key_ewma] -= df[key_filt]**2 
-        
-        
-    df.fillna(0, inplace=True)
-    return df
-
-def calc_cross(symbols, df, lmbd=.99, ewma=True, deno=False):
-    for i in range(len(symbols)):
-        for j in range(i+1, len(symbols)):
-            s1 = symbols[i]
-            s2 = symbols[j]
-            key = f'{s1}_{s2}'
-            if deno:
-                df[key] = df[s1+'_deno'] * df[s2+'_deno']
-            else:
-                df[key] = df[s1] * df[s2]
-
-            df[key] = df[key].ewm(alpha=1-lmbd).mean()
-            if not ewma:
-                df[key] -= (df[key]).ewm(alpha=1-lmbd).mean()
-    df.fillna(0, inplace=True)
-    return df
-
-
-def calc_matrix(symbols, df, lmbd, ewma=True, deno=False):
-    df_rets = calc_returns(symbols, df, deno)
-    df_rets = calc_var(symbols, df_rets, lmbd, ewma=ewma)
-    df_rets = calc_cross(symbols, df_rets, lmbd, ewma=ewma)
-    return df_rets
+from calcs import cross_matrix
+                   
 
 def get_cross_var_keys(symbols):
     keys = []
@@ -88,38 +30,39 @@ def get_return_keys(symbols):
         keys.append(s)
     return keys
  
-def get_matrix(symbols, sample):
+def get_matrix(symbols, row_item):
     a = np.zeros(len(symbols)*len(symbols))
     a = a.reshape(len(symbols), len(symbols))
     for i in range(len(symbols)):
         key = f'{symbols[i]}_ewma'
-        a[i,i] = sample[key]
+        a[i,i] = row_item[key]
         for j in range(i+1, len(symbols)):
             key = f'{symbols[i]}_{symbols[j]}'
-            a[i,j] = sample[key] 
-            a[j,i] = sample[key]
+            a[i,j] = row_item[key] 
+            a[j,i] = row_item[key]
     return a
 
-def equal_weight_port(symbols, df):
-    data = []
+def equal_weight_port(symbols, df, name='equal'):
+    print(df.keys())
+    data_risk = []
     w = np.array([1/len(symbols)] * len(symbols))
     for _, row in df.iterrows():
 
-        a = get_matrix(symbols, sample=row)
-        data.append(np.matmul(w, np.matmul(a, w)))
+        a = get_matrix(symbols, row_item=row)
+        data_risk.append(np.matmul(w, np.matmul(a, w)))
 
-    df['equal_port'] = np.array(data)
+    df[f'{name}_port'] = np.array(data_risk)
 
     return df, w
 
-def min_ewma_port(symbols, df):
+def min_ewma_port(symbols, df, name='inv'):
     data = []
     w_old = np.zeros(len(symbols))
     N = 0
     w = w_old
     for index, row in df.iterrows():
 
-        a = get_matrix(symbols, sample=row)
+        a = get_matrix(symbols, row_item=row)
         data.append(np.matmul(w, np.matmul(a, w)))
 
         s_var = (1/row[[e+'_ewma' for e in symbols]]).sum()
@@ -133,7 +76,7 @@ def min_ewma_port(symbols, df):
                 w_old = w
                 N = N + 1  
 
-    df['ewma_port'] = np.array(data)
+    df[f'{name}_port'] = np.array(data)
 
     return df, w
 
@@ -197,7 +140,7 @@ def max_sharpe(symbols, df, rfr=0.0001, r=False):
     for index, row in df.iterrows():
 
         N_index += 1
-        a = get_matrix(symbols, sample=row)
+        a = get_matrix(symbols, row_item=row)
         returns = row[[e+'_ewm' for e in symbols]]
 
         if not N_index % 60:
@@ -255,7 +198,8 @@ np.random.seed(1)
 symbols = ['KO', 'PEP', 'PG', 'AAPL', 'JNJ', 'AMZN', 'DE', 'CAT', 'META', 'MSFT', 'ADI']
 symbols = ['PG', 'PEP', 'AAPL']
 
-equal_weights = np.array([1/len(symbols)] * len(symbols))
+symbols.sort()
+
 
 df = yf.download(symbols, '2015-2-1')['Adj Close']
 df_prices = copy.deepcopy(df)
@@ -263,7 +207,7 @@ df_prices = copy.deepcopy(df)
 lmbd = .94
 ewma = False
 
-df_rets = calc_matrix(symbols, df, lmbd, ewma=ewma)
+df_rets = cross_matrix(symbols, df, lmbd, ewma=ewma)
 
 print(df_prices.tail())
 print(df_rets.tail())
@@ -274,7 +218,7 @@ plot_stacked(symbols, df_rets, '_ewma')
 df, w = min_ewma_port(symbols,df)
 df, w1 = equal_weight_port(symbols,df)
 print(w, w1)
-plt.plot(df['ewma_port'])
+plt.plot(df['inv_port'])
 plt.plot(df['equal_port'], 'k')
 
 plt.show()
