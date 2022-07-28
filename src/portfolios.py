@@ -1,5 +1,5 @@
 import numpy as np
-from calcs import csum
+from calcs import cusum
 
 def get_cross_var_keys(symbols):
     keys = []
@@ -46,7 +46,7 @@ def get_matrix(symbols, row_item):
     return a
 
 def equal_weight_port(symbols, df, name='equal'):
-    df = csum(symbols, df)
+    df = cusum(symbols, df)
     data_risk = []
     data_rel = []
     ret_keys = get_filt_keys(symbols)

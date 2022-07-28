@@ -10,7 +10,7 @@ def returns(symbols, df, deno=False):
     df.fillna(0, inplace=True)
     return df
 
-def csum(symbols, df):
+def cusum(symbols, df):
     for s in symbols:
         key_csum = s + '_csum'
         df[key_csum] = df[s].cumsum()
