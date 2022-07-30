@@ -126,6 +126,21 @@ def filter_df(folder:str, file_name:str):
         rslt_df = rslt_df[rslt_df['Dividend %'] > f'{i}%']
         print(i, len(rslt_df))
 
+def filter_df1(folder:str, file_name:str):
+    df = read_csv(folder, file_name)
+
+    rslt_df = df[df['cedear'] == 1]
+    rslt_df = rslt_df[rslt_df['Dividend'] != '-']
+    rslt_df = rslt_df[rslt_df['Dividend'] > '0']
+    rslt_df = rslt_df[rslt_df['Dividend %'] > '1.0']
+    rslt_df = rslt_df[rslt_df['weight'] > .1]
+    rslt_df = rslt_df[rslt_df['SMA200'] > '1.0%']
+    rslt_df = rslt_df[rslt_df['SMA50'] > '1.0%']
+
+    print(rslt_df.head())
+    print(len(rslt_df))
+
+
 from pathlib import Path
 
 def main():
@@ -134,11 +149,11 @@ def main():
 
     p.mkdir(exist_ok=True)
 
-    file_name = 'sp500-2022-07-30b.csv'
+    file_name = 'sp500-2022-07-30.csv'
 
-    scrap_sp500(p, file_name, max_n=1000)
+    # scrap_sp500(p, file_name, max_n=10)
 
-    filter_df(p, file_name)
+    filter_df1(p, file_name)
 
 
 
