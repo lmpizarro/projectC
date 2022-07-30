@@ -129,16 +129,41 @@ def filter_df(folder:str, file_name:str):
 def filter_df1(folder:str, file_name:str):
     df = read_csv(folder, file_name)
 
+    def tr_pct(x):
+        if type(x) == str:
+            try:
+                x = float(x[:-1])
+            except Exception:
+                pass
+        return x
+    
+    def tr_str(x):
+        try:
+            x = float(x)
+        except Exception:
+            pass
+        return x
+    
+    df['Change'] = df['Change'].transform(tr_pct)
+    df['SMA200'] = df['SMA200'].transform(tr_pct)
+    df['SMA50'] = df['SMA50'].transform(tr_pct)
+    df['SMA20'] = df['SMA20'].transform(tr_pct)
+    df['Dividend %'] = df['Dividend %'].transform(tr_pct)
+    df['Dividend'] = df['Dividend'].transform(tr_str)
+    df['P/E'] = df['P/E'].transform(tr_str)
+
     rslt_df = df[df['cedear'] == 1]
     rslt_df = rslt_df[rslt_df['Dividend'] != '-']
-    rslt_df = rslt_df[rslt_df['Dividend'] > '0']
-    rslt_df = rslt_df[rslt_df['Dividend %'] > '1.0']
+    rslt_df = rslt_df[rslt_df['Dividend'] > 0]
+    rslt_df = rslt_df[rslt_df['Dividend %'] > 1.0]
     rslt_df = rslt_df[rslt_df['weight'] > .1]
-    rslt_df = rslt_df[rslt_df['SMA200'] > '1.0%']
-    rslt_df = rslt_df[rslt_df['SMA50'] > '1.0%']
+    rslt_df = rslt_df[rslt_df['SMA200'] < 0 ]
+    rslt_df = rslt_df[rslt_df['P/E'] < 15 ]
+    # rslt_df = rslt_df[rslt_df['SMA50'] < 0 ]
 
     print(rslt_df.head())
     print(len(rslt_df))
+    print(rslt_df['ticker'])
 
 
 from pathlib import Path
