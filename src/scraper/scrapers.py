@@ -2,11 +2,13 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 import copy
+import json
 
 urls = {"nasdaq100": "https://www.slickcharts.com/nasdaq100",
         "dowjones": "https://www.slickcharts.com/dowjones", 
         "sp500": "https://www.slickcharts.com/sp500",
-        "sectors": "https://topforeignstocks.com/indices/components-of-the-sp-500-index"}
+        "sectors": "https://topforeignstocks.com/indices/components-of-the-sp-500-index",
+        "cedears": "https://www.rava.com/cotizaciones/cedears"}
 
 
 def scrap_slick_chart(url, constituents):
@@ -25,7 +27,18 @@ def scrap_slick_chart(url, constituents):
         constituents[ticker]['price'] = price
     return constituents
 
-
+def scrap_cedear_rava():
+    url = urls['cedears']
+    resp = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
+    soup = BeautifulSoup(resp.text, features='html.parser')
+    table = soup.find('main').find('cedears-p')
+    
+    body = json.loads(table.attrs[':datos'])['body']
+    symbolos = []
+    for b in body:
+        symbolos.append(b['simbolo'])
+    return symbolos
+ 
 def scrap_sp500(folder:str, file_name:str, max_n:int = 10):
     url_sectors = urls['sectors']
     url_sp500 = urls['sp500'] 
@@ -62,11 +75,12 @@ def scrap_sp500(folder:str, file_name:str, max_n:int = 10):
             ticker = new_ticker
 
     nasdaq100 = scrap_slick_chart(urls['nasdaq100'], {})
+    cedears = scrap_cedear_rava()
 
     N = 0
     for ticker in constituents:
         N += 1
-        print(ticker, N)
+        print(ticker, N, ticker in cedears)
         try:
             url = f'https://finviz.com/quote.ashx?t={ticker}'
             resp = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
@@ -86,6 +100,7 @@ def scrap_sp500(folder:str, file_name:str, max_n:int = 10):
                         constituents[ticker][k] = v
         except AttributeError as err:
             print(err)
+        constituents[ticker]['cedear'] = 1 if ticker in cedears else 0
         if N == max_n:
             break
 
@@ -113,7 +128,7 @@ def filter_df(folder:str, file_name:str):
 
 from pathlib import Path
 
-if __name__ == '__main__':
+def main():
     p = Path(__file__)
     p = p.parent.parent / "data"
 
@@ -123,4 +138,9 @@ if __name__ == '__main__':
 
     scrap_sp500(p, file_name, max_n=1000)
 
-    filter_df(p, file_name)    
+    filter_df(p, file_name)
+
+
+
+if __name__ == '__main__':
+    main()

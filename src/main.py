@@ -127,6 +127,7 @@ np.random.seed(1)
 symbols = ['KO', 'PEP', 'PG', 'AAPL', 'JNJ', 'AMZN', 'DE', 'CAT', 'META', 'MSFT', 'ADI']
 symbols = ['PG', 'PEP', 'AAPL']
 symbols = ['^DJI', '^GSPC', '^IXIC', '^RUT']
+symbols = ['^DJI', '^GSPC', '^IXIC']
 
 symbols.sort()
 
