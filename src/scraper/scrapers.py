@@ -151,6 +151,7 @@ def filter_df1(folder:str, file_name:str):
     df['Dividend %'] = df['Dividend %'].transform(tr_pct)
     df['Dividend'] = df['Dividend'].transform(tr_str)
     df['P/E'] = df['P/E'].transform(tr_str)
+    df['Beta'] = df['Beta'].transform(tr_str)
 
     rslt_df = df[df['cedear'] == 1]
     rslt_df = rslt_df[rslt_df['Dividend'] != '-']
@@ -159,6 +160,8 @@ def filter_df1(folder:str, file_name:str):
     rslt_df = rslt_df[rslt_df['weight'] > .1]
     rslt_df = rslt_df[rslt_df['SMA200'] < 0 ]
     rslt_df = rslt_df[rslt_df['P/E'] < 15 ]
+    rslt_df = rslt_df[rslt_df['Beta'] > .5 ]
+    rslt_df = rslt_df[rslt_df['Beta'] < 1 ]
     # rslt_df = rslt_df[rslt_df['SMA50'] < 0 ]
 
     print(rslt_df.head())
