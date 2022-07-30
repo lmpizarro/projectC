@@ -126,6 +126,7 @@ def control_var_key(symbol, df):
 np.random.seed(1)
 symbols = ['KO', 'PEP', 'PG', 'AAPL', 'JNJ', 'AMZN', 'DE', 'CAT', 'META', 'MSFT', 'ADI']
 symbols = ['PG', 'PEP', 'AAPL']
+symbols = ['^DJI', '^GSPC', '^IXIC', '^RUT']
 
 symbols.sort()
 
