@@ -122,7 +122,7 @@ def control_var_key(symbol, df):
     control_ = ((f_ema - s_ema)<0)
     return control_
 
-
+# 45 35 20
 np.random.seed(1)
 symbols = ['KO', 'PEP', 'PG', 'AAPL', 'JNJ', 'AMZN', 'DE', 'CAT', 'META', 'MSFT', 'ADI']
 symbols = ['PG', 'PEP', 'AAPL']
