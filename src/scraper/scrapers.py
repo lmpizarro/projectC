@@ -38,7 +38,35 @@ def scrap_cedear_rava():
     for b in body:
         symbolos.append(b['simbolo'])
     return symbolos
- 
+
+
+def scrap_finviz(constituents, max_n=10):
+    N = 0
+    for ticker in copy.deepcopy(constituents):
+        print(ticker)
+        N += 1
+        try:
+            url = f'https://finviz.com/quote.ashx?t={ticker}'
+            resp = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
+            soup = BeautifulSoup(resp.text, features='lxml')
+            table = soup.find('table', {'class': 'snapshot-table2'})
+            for row in table.findAll('tr')[0:]:
+                tds = row.findAll('td')
+                for i in range(0, len(tds), 2):
+                    k = tds[i].text
+                    v = tds[i+1].text
+                    if k not in constituents[ticker]:
+                        constituents[ticker][k] = v
+        except AttributeError as err:
+            del constituents[ticker]
+            print(err)
+        if N == max_n:
+            break
+
+    return constituents
+
+
+
 def scrap_sp500(folder:str, file_name:str, max_n:int = 10):
     url_sectors = urls['sectors']
     url_sp500 = urls['sp500'] 
@@ -78,6 +106,7 @@ def scrap_sp500(folder:str, file_name:str, max_n:int = 10):
     cedears = scrap_cedear_rava()
 
     N = 0
+
     for ticker in constituents:
         N += 1
         print(ticker, N, ticker in cedears)
@@ -144,6 +173,8 @@ def filter_df1(folder:str, file_name:str):
             pass
         return x
     
+    df['Perf YTD'] = df['Perf YTD'].transform(tr_pct)
+    df['Perf Year'] = df['Perf Year'].transform(tr_pct)
     df['Change'] = df['Change'].transform(tr_pct)
     df['SMA200'] = df['SMA200'].transform(tr_pct)
     df['SMA50'] = df['SMA50'].transform(tr_pct)
@@ -152,16 +183,19 @@ def filter_df1(folder:str, file_name:str):
     df['Dividend'] = df['Dividend'].transform(tr_str)
     df['P/E'] = df['P/E'].transform(tr_str)
     df['Beta'] = df['Beta'].transform(tr_str)
+    # df['Recom'] = df['Recom'].transform(tr_str)
 
     rslt_df = df[df['cedear'] == 1]
-    rslt_df = rslt_df[rslt_df['Dividend'] != '-']
-    rslt_df = rslt_df[rslt_df['Dividend'] > 0]
-    rslt_df = rslt_df[rslt_df['Dividend %'] > 1.0]
-    rslt_df = rslt_df[rslt_df['weight'] > .1]
-    rslt_df = rslt_df[rslt_df['SMA200'] < 0 ]
-    rslt_df = rslt_df[rslt_df['P/E'] < 15 ]
-    rslt_df = rslt_df[rslt_df['Beta'] > .5 ]
-    rslt_df = rslt_df[rslt_df['Beta'] < 1 ]
+    # rslt_df = rslt_df[rslt_df['Perf YTD'] > 0]
+    rslt_df = rslt_df[rslt_df['Recom'] < "2.0"]
+    # rslt_df = rslt_df[rslt_df['Dividend'] != '-']
+    # rslt_df = rslt_df[rslt_df['Dividend'] > 0]
+    # rslt_df = rslt_df[rslt_df['Dividend %'] > 1.0]
+    # rslt_df = rslt_df[rslt_df['weight'] > .1]
+    # rslt_df = rslt_df[rslt_df['SMA200'] < 0 ]
+    # rslt_df = rslt_df[rslt_df['P/E'] < 15 ]
+    rslt_df = rslt_df[rslt_df['Beta'] > .8 ]
+    rslt_df = rslt_df[rslt_df['Beta'] < 1.4 ]
     # rslt_df = rslt_df[rslt_df['SMA50'] < 0 ]
 
     print(rslt_df.head())
@@ -183,7 +217,26 @@ def main():
 
     filter_df1(p, file_name)
 
+def cedear_not_in_sp500(max_n=10):
+    cedears = scrap_cedear_rava()
+    sp500 = scrap_slick_chart(urls['sp500'], {}).keys()
+    cedear_not_sp500 = {}
+    for t in cedears:
+        if t not in sp500:
+            cedear_not_sp500[t] = {}
 
+    df = pd.DataFrame.from_dict(scrap_finviz(cedear_not_sp500, max_n=max_n), orient='index')
+    return df
 
 if __name__ == '__main__':
     main()
+    ce = scrap_cedear_rava()
+    print(len(ce))
+    print(ce)
+
+
+    print('\n')
+    print('\n')
+    c = cedear_not_in_sp500(max_n=10)
+
+    print(c.tail())
