@@ -1,5 +1,6 @@
+from typing import List, Tuple
 import numpy as np
-from calcs import cusum
+from calcs import cumsum
 
 def get_cross_var_keys(symbols):
     keys = []
@@ -31,7 +32,14 @@ def get_filt_keys(symbols):
         keys.append(key_var)
     return keys
 
-    
+def get_cumsum_keys(symbols):
+    keys = []
+    for s in symbols:
+        key_var = s + '_csum'
+        keys.append(key_var)
+    return keys
+
+
  
 def get_matrix(symbols, row_item):
     a = np.zeros(len(symbols)*len(symbols))
@@ -46,7 +54,7 @@ def get_matrix(symbols, row_item):
     return a
 
 def equal_weight_port(symbols, df, name='equal'):
-    df = cusum(symbols, df)
+    df = cumsum(symbols, df)
     data_risk = []
     data_rel = []
     ret_keys = get_filt_keys(symbols)
@@ -91,3 +99,44 @@ def min_ewma_port(symbols, df, name='inv'):
 
     return df, w
 
+
+import yfinance as yf
+from datetime import date
+import copy
+from calcs import cross_matrix
+
+def custom_port(ct_port: List[Tuple[str, float]], 
+                years=10,
+                name='c_50_35_15'):
+
+    c_port = sorted(ct_port, key=lambda tup: tup[0])
+    symbols = [t[0] for t in ct_port]
+    weights = np.asarray([w[1] for w in ct_port])
+    weights = weights / weights.sum()
+    c_year = date.today().year
+
+    begin = f'{c_year-years}-1-2'
+
+    df = yf.download(symbols, begin)['Adj Close']
+
+    lmbd = .94
+    ewma = False
+
+    df_rets = cross_matrix(symbols, df, lmbd, ewma=ewma)
+    df_rets = cumsum(symbols, df_rets)
+
+    df_csum = df_rets[get_cumsum_keys(symbols)]
+    
+    df_c = weights * df_csum
+    df_c['port_cum'] = df_c.sum(axis=1)
+
+    return df_c, c_port
+
+if __name__ == '__main__':
+    c_port = [("^DJI", .15), ("^GSPC", .6), ('^IXIC', .25)]
+
+
+    df, c_port = custom_port(c_port, years=20)
+    
+
+    print(df.tail())
