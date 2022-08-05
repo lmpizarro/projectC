@@ -1,6 +1,6 @@
 from typing import List, Tuple
 import numpy as np
-from calcs import cumsum
+from calcs import (cumsum, returns)
 
 def get_cross_var_keys(symbols):
     keys = []
@@ -105,19 +105,24 @@ from datetime import date
 import copy
 from calcs import cross_matrix
 
+def download(symbols, years=10):
+    symbols.sort()
+    c_year = date.today().year
+    begin = f'{c_year-years}-1-2'
+    df = yf.download(symbols, begin)['Adj Close']
+
+    return df
+
 def custom_port(ct_port: List[Tuple[str, float]], 
                 years=10,
-                name='c_50_35_15'):
+                name='cust'):
 
     c_port = sorted(ct_port, key=lambda tup: tup[0])
     symbols = [t[0] for t in ct_port]
     weights = np.asarray([w[1] for w in ct_port])
     weights = weights / weights.sum()
-    c_year = date.today().year
 
-    begin = f'{c_year-years}-1-2'
-
-    df = yf.download(symbols, begin)['Adj Close']
+    df = download(symbols, years=years)
 
     lmbd = .94
     ewma = False
@@ -128,15 +133,46 @@ def custom_port(ct_port: List[Tuple[str, float]],
     df_csum = df_rets[get_cumsum_keys(symbols)]
     
     df_c = weights * df_csum
-    df_c['port_cum'] = df_c.sum(axis=1)
+    df_c[f'{name}'] = df_c.sum(axis=1)
 
     return df_c, c_port
 
-if __name__ == '__main__':
-    c_port = [("^DJI", .15), ("^GSPC", .6), ('^IXIC', .25)]
+def mrkt_port(name='MRKT', years=10):
+    c_port = [("^DJI", .05), ("^GSPC", .45), ('^IXIC', .25), ('^RUT', .25)]
+    df, c_port = custom_port(c_port, years=years, name=name)
+    return df, c_port
 
 
-    df, c_port = custom_port(c_port, years=20)
+def data_symbols(symbols, years=10):
+    df = download(symbols, years=years)
+
+    df_mrkt, _ = mrkt_port(years=years)
+    df_rets = returns(symbols, df)
+    df_rets = cumsum(symbols, df_rets)
+
+    for s in symbols:
+        df_rets.drop(s, inplace=True, axis=1)
+        df.rename(columns={f"{s}_csum":s}, inplace=True)
+
+    df_rets['MRKT'] = df_mrkt['MRKT']
     
+    return df_rets
+     
 
+if __name__ == '__main__':
+
+    df, c_port = mrkt_port()
     print(df.tail())
+
+    import matplotlib.pyplot as plt
+
+    plt.plot(df['MRKT'])
+    plt.show()
+
+    symbols = ['AAPL', 'MSFT', 'ADI']
+    df_s = data_symbols(symbols)
+
+    print(df_s.tail())
+
+    plt.plot(df_s)
+    plt.show()
