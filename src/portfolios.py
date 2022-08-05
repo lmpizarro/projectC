@@ -108,7 +108,8 @@ from calcs import cross_matrix
 def download(symbols, years=10):
     symbols.sort()
     c_year = date.today().year
-    begin = f'{c_year-years}-1-2'
+    c_month = date.today().month
+    begin = f'{c_year-years}-{c_month}-2'
     df = yf.download(symbols, begin)['Adj Close']
 
     return df
@@ -172,17 +173,19 @@ if __name__ == '__main__':
     print(df.tail())
 
     import matplotlib.pyplot as plt
+    import pandas as pd
 
     plt.plot(df['MRKT'])
     plt.show()
 
-    symbols = ['AAPL', 'MSFT', 'AMZN']
+    symbols = ['AAPL', 'MSFT', 'AMZN', 'TSLA', 'BRK-B', 'KO', 'NVDA', 'JNJ', 'META', 'PG', 'MELI', 'PEP', 'AVGO']
 
-    df_csum, df_cov = data_symbols(symbols, lmbd=0.94)
+    df_csum, df_cov = data_symbols(symbols, lmbd=0.94, years=1)
 
-    print(df_cov.tail())
-
-    print(df_cov.keys())
+    df_csum.index = pd.to_datetime(df_csum.index)
+    df_re = df_csum.asfreq('5D').ffill()
+    
+    print(100*(df_re.tail(10)).round(2))
 
     # plt.plot(df_cov[[f'B_{s}' for s in symbols if s != 'MRKT']])
     plt.plot(df_csum)
