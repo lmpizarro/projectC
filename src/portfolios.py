@@ -155,8 +155,11 @@ def data_symbols(symbols, years=10):
         df.rename(columns={f"{s}_csum":s}, inplace=True)
 
     df_rets['MRKT'] = df_mrkt['MRKT']
-    
-    return df_rets
+    df_csum = copy.deepcopy(df_rets)
+    symbols.append('MRKT')
+
+    df_cov = cross_matrix(symbols, df_rets, lmbd=.94, ewma=False)
+    return df_csum, df_cov
      
 
 if __name__ == '__main__':
@@ -170,9 +173,9 @@ if __name__ == '__main__':
     plt.show()
 
     symbols = ['AAPL', 'MSFT', 'ADI']
-    df_s = data_symbols(symbols)
+    df_csum, df_cov = data_symbols(symbols)
 
-    print(df_s.tail())
+    print(df_csum.tail())
 
-    plt.plot(df_s)
+    plt.plot(df_csum)
     plt.show()
