@@ -113,7 +113,8 @@ def download(symbols, years=10):
 
     return df
 
-def custom_port(ct_port: List[Tuple[str, float]], 
+def custom_port(ct_port: List[Tuple[str, float]],
+                lmbd=.94,
                 years=10,
                 name='cust'):
 
@@ -121,13 +122,10 @@ def custom_port(ct_port: List[Tuple[str, float]],
     symbols = [t[0] for t in ct_port]
     weights = np.asarray([w[1] for w in ct_port])
     weights = weights / weights.sum()
-
     df = download(symbols, years=years)
 
-    lmbd = .94
-    ewma = False
 
-    df_rets = cross_matrix(symbols, df, lmbd, ewma=ewma)
+    df_rets = cross_matrix(symbols, df, lmbd, ewma=True)
     df_rets = cumsum(symbols, df_rets)
 
     df_csum = df_rets[get_cumsum_keys(symbols)]
@@ -137,16 +135,16 @@ def custom_port(ct_port: List[Tuple[str, float]],
 
     return df_c, c_port
 
-def mrkt_port(name='MRKT', years=10):
-    c_port = [("^DJI", .05), ("^GSPC", .45), ('^IXIC', .25), ('^RUT', .25)]
-    df, c_port = custom_port(c_port, years=years, name=name)
+def mrkt_port(name='MRKT', lmbd=.94, years=10):
+    c_port = [("^DJI", .1), ("^GSPC", .7), ('^IXIC', .1), ('^RUT', .1)]
+    df, c_port = custom_port(c_port, lmbd=lmbd, years=years, name=name)
     return df, c_port
 
 
-def data_symbols(symbols, years=10):
+def data_symbols(symbols, years=10, lmbd=.76):
     df = download(symbols, years=years)
 
-    df_mrkt, _ = mrkt_port(years=years)
+    df_mrkt, _ = mrkt_port(years=years, lmbd=lmbd)
     df_rets = returns(symbols, df)
     df_rets = cumsum(symbols, df_rets)
 
@@ -158,7 +156,13 @@ def data_symbols(symbols, years=10):
     df_csum = copy.deepcopy(df_rets)
     symbols.append('MRKT')
 
-    df_cov = cross_matrix(symbols, df_rets, lmbd=.94, ewma=False)
+    df_cov = cross_matrix(symbols, df_rets, lmbd=lmbd, ewma=False)
+
+    symbols.remove('MRKT') 
+    for s in symbols:
+        k_cov_mrkt = f'{s}_MRKT'
+        df_cov[f'B_{s}'] = df_cov[k_cov_mrkt] / df_cov['MRKT_ewma']
+    
     return df_csum, df_cov
      
 
@@ -172,10 +176,14 @@ if __name__ == '__main__':
     plt.plot(df['MRKT'])
     plt.show()
 
-    symbols = ['AAPL', 'MSFT', 'ADI']
-    df_csum, df_cov = data_symbols(symbols)
+    symbols = ['AAPL', 'MSFT', 'AMZN']
 
-    print(df_csum.tail())
+    df_csum, df_cov = data_symbols(symbols, lmbd=0.94)
 
+    print(df_cov.tail())
+
+    print(df_cov.keys())
+
+    # plt.plot(df_cov[[f'B_{s}' for s in symbols if s != 'MRKT']])
     plt.plot(df_csum)
     plt.show()
