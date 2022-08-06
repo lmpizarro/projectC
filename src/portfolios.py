@@ -1,6 +1,7 @@
 from typing import List, Tuple
 import numpy as np
-from calcs import (cumsum, returns)
+from calcs import (cumsum, returns, vars, cross_vars)
+from denoisers.butter.filter import min_lp
 
 def get_cross_var_keys(symbols):
     keys = []
@@ -102,20 +103,26 @@ def min_ewma_port(symbols, df, name='inv'):
 
 import yfinance as yf
 from datetime import date
-import copy
-from calcs import cross_matrix
 
-def download(symbols, years=10):
+def download(symbols, years=10, denoise=False):
     symbols.sort()
     c_year = date.today().year
     c_month = date.today().month
     begin = f'{c_year-years}-{c_month}-2'
     df = yf.download(symbols, begin)['Adj Close']
 
+    if denoise:
+        df = min_lp(symbols, df)
+        df.drop(columns=symbols, inplace=True)
+        re = {f'{s}_deno':s for s in symbols}
+
+        df.rename(columns=re, inplace=True)
+
+    
+
     return df
 
 def custom_port(ct_port: List[Tuple[str, float]],
-                lmbd=.94,
                 years=10,
                 name='cust'):
 
@@ -125,68 +132,104 @@ def custom_port(ct_port: List[Tuple[str, float]],
     weights = weights / weights.sum()
     df = download(symbols, years=years)
 
-
-    df_rets = cross_matrix(symbols, df, lmbd, ewma=True)
-    df_rets = cumsum(symbols, df_rets)
-
-    df_csum = df_rets[get_cumsum_keys(symbols)]
+    df_rets = returns(symbols, df)
     
-    df_c = weights * df_csum
+    df_c = weights * df_rets
     df_c[f'{name}'] = df_c.sum(axis=1)
+    df_c[f'{name}_csum'] = df_c[f'{name}'].cumsum()
 
-    return df_c, c_port
+    return df_c[[f'{name}_csum', f'{name}']], c_port
 
-def mrkt_port(name='MRKT', lmbd=.94, years=10):
+def mrkt_returns(name='MRKT', years=10):
+    """
+        return MRKT daily returns
+        return csum weighted market component
+        return components and weight
+    """
     c_port = [("^DJI", .1), ("^GSPC", .7), ('^IXIC', .1), ('^RUT', .1)]
-    df, c_port = custom_port(c_port, lmbd=lmbd, years=years, name=name)
+    df, c_port = custom_port(c_port, years=years, name=name)
     return df, c_port
 
-
-def data_symbols(symbols, years=10, lmbd=.76):
+def symbols_returns(symbols, years=10):
+    """
+        include market returns
+    """
     df = download(symbols, years=years)
 
-    df_mrkt, _ = mrkt_port(years=years, lmbd=lmbd)
+    df_mrkt, _ = mrkt_returns(years=years)
     df_rets = returns(symbols, df)
-    df_rets = cumsum(symbols, df_rets)
-
-    for s in symbols:
-        df_rets.drop(s, inplace=True, axis=1)
-        df.rename(columns={f"{s}_csum":s}, inplace=True)
 
     df_rets['MRKT'] = df_mrkt['MRKT']
-    df_csum = copy.deepcopy(df_rets)
+
     symbols.append('MRKT')
 
-    df_cov = cross_matrix(symbols, df_rets, lmbd=lmbd, ewma=False)
+    return df_rets
+import copy
+def cum_returns(df_rets):
+    df = copy.deepcopy(df_rets)
+    symbols = df_rets.keys()
+    df_accum = cumsum(symbols, df)
+    df_accum.drop(columns=symbols, inplace=True)
 
-    symbols.remove('MRKT') 
-    for s in symbols:
-        k_cov_mrkt = f'{s}_MRKT'
-        df_cov[f'B_{s}'] = df_cov[k_cov_mrkt] / df_cov['MRKT_ewma']
-    
-    return df_csum, df_cov
+    return df_accum
      
+def variances(df_rets, lmbd=.94, ewma=True):
+    df = copy.deepcopy(df_rets)
+    symbols = df_rets.keys()
+    df = vars(symbols, df, lmbd, ewma=ewma)
+    df = cross_vars(symbols, df, lmbd, ewma=ewma)
+    df.drop(columns=symbols, inplace=True)
+
+    df.drop(columns=[f'{s}_filt' for s in symbols], inplace=True)
+    return df
 
 if __name__ == '__main__':
 
-    df, c_port = mrkt_port()
-    print(df.tail())
-
     import matplotlib.pyplot as plt
     import pandas as pd
+    import seaborn as sns
+
+    df, c_port = mrkt_returns()
+    print(df.tail())
 
     plt.plot(df['MRKT'])
     plt.show()
+    plt.plot(df['MRKT_csum'])
+    plt.show()
 
     symbols = ['AAPL', 'MSFT', 'AMZN', 'TSLA', 'BRK-B', 'KO', 'NVDA', 'JNJ', 'META', 'PG', 'MELI', 'PEP', 'AVGO']
+    symbols = ['AAPL', 'MSFT', 'AMZN', 'KO']
 
-    df_csum, df_cov = data_symbols(symbols, lmbd=0.94, years=1)
+    df_rets = symbols_returns(symbols, years=10)
+    cum_ret = cum_returns(df_rets)
+    covaria = variances(df_rets, ewma=False)
 
-    df_csum.index = pd.to_datetime(df_csum.index)
-    df_re = df_csum.asfreq('5D').ffill()
-    
-    print(100*(df_re.tail(10)).round(2))
+    print(df_rets.tail(10))
 
-    # plt.plot(df_cov[[f'B_{s}' for s in symbols if s != 'MRKT']])
-    plt.plot(df_csum)
+    plt.plot(df_rets)
     plt.show()
+
+    sns.pairplot(df_rets)
+    plt.show()
+
+
+    plt.plot(cum_ret)
+    plt.show()
+
+    print(covaria.keys())
+    plt.plot(covaria)
+    plt.show()
+    
+    from numpy import linalg as LA
+    symbols.remove('MRKT')
+    for index, row in covaria.iterrows():
+
+        a = get_matrix(symbols, row_item=row)
+
+        try:
+            # print(LA.cond(a), bb)
+            bb = min(LA.svd(a, compute_uv=False))*min(LA.svd(LA.inv(a), compute_uv=False))
+        except Exception as err:
+            print(index, err, a)
+
+    print(covaria.head())
