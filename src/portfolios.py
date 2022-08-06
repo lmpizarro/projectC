@@ -114,8 +114,8 @@ def download(symbols, years=10, denoise=False):
     if denoise:
         df = min_lp(symbols, df)
         df.drop(columns=symbols, inplace=True)
-        re = {f'{s}_deno':s for s in symbols}
 
+        re = {f'{s}_deno':s for s in symbols}
         df.rename(columns=re, inplace=True)
 
     
@@ -150,6 +150,7 @@ def mrkt_returns(name='MRKT', years=10):
     df, c_port = custom_port(c_port, years=years, name=name)
     return df, c_port
 
+
 def symbols_returns(symbols, years=10):
     """
         include market returns
@@ -164,6 +165,7 @@ def symbols_returns(symbols, years=10):
     symbols.append('MRKT')
 
     return df_rets
+
 import copy
 def cum_returns(df_rets):
     df = copy.deepcopy(df_rets)
@@ -172,7 +174,25 @@ def cum_returns(df_rets):
     df_accum.drop(columns=symbols, inplace=True)
 
     return df_accum
-     
+
+def mrkt_diffs(df_rets):
+    df_cu = cum_returns(df_rets)
+
+    symbols = list(df_cu.keys())
+    symbols.remove('MRKT_csum')
+
+    for s in symbols:
+        df_cu[s] = (df_cu[s] - df_cu['MRKT_csum'])
+
+    df_cu.drop(columns=['MRKT_csum'])
+    re = {s:s.split('_')[0]for s in symbols}
+    df_cu.rename(columns=re, inplace=True)
+
+
+    return df_cu
+
+
+
 def variances(df_rets, lmbd=.94, ewma=True):
     df = copy.deepcopy(df_rets)
     symbols = df_rets.keys()
@@ -200,9 +220,16 @@ if __name__ == '__main__':
     symbols = ['AAPL', 'MSFT', 'AMZN', 'TSLA', 'BRK-B', 'KO', 'NVDA', 'JNJ', 'META', 'PG', 'MELI', 'PEP', 'AVGO']
     symbols = ['AAPL', 'MSFT', 'AMZN', 'KO']
 
-    df_rets = symbols_returns(symbols, years=10)
+    df_rets = symbols_returns(symbols, years=20)
     cum_ret = cum_returns(df_rets)
     covaria = variances(df_rets, ewma=False)
+
+    mrkt_rls = mrkt_diffs(df_rets)
+    print(mrkt_rls.tail())
+    print(mrkt_rls.keys())
+    plt.plot(mrkt_rls)
+    plt.show()
+    input()
 
     print(df_rets.tail(10))
 
