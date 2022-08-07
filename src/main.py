@@ -4,9 +4,12 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import copy
 from plot.ploter import plot_stacked
-from calcs import cross_matrix
+from calcs import variances
 from portfolios import (min_ewma_port, 
-                        equal_weight_port)                   
+                        equal_weight_port,
+                        get_matrix, 
+                        get_cross_var_keys, 
+                        get_ewma_keys)                   
 
 
 
@@ -126,10 +129,10 @@ def control_var_key(symbol, df):
 np.random.seed(1)
 symbols = ['KO', 'PEP', 'PG', 'AAPL', 'JNJ', 'AMZN', 'DE', 'CAT', 'META', 'MSFT', 'ADI']
 symbols = ['PG', 'PEP', 'AAPL']
-symbols = ['^DJI', '^GSPC', '^IXIC', '^RUT']
-symbols = ['^DJI', '^GSPC', '^IXIC']
-
+# symbols = ['^DJI', '^GSPC', '^IXIC', '^RUT']
 symbols.sort()
+
+
 
 
 df = yf.download(symbols, '2015-2-1')['Adj Close']
@@ -138,7 +141,7 @@ df_prices = copy.deepcopy(df)
 lmbd = .94
 ewma = False
 
-df_rets = cross_matrix(symbols, df, lmbd, ewma=ewma)
+df_rets = variances(symbols, df, lmbd, ewma=ewma)
 
 print(df_prices.tail())
 print(df_rets.tail())

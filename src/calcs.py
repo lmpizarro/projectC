@@ -1,13 +1,13 @@
 import numpy as np
 
-def returns(symbols, df, deno=False):
-    for s in symbols:
-        if deno:
-            pass
+def returns(symbols, df, log__=False):
 
-        df[s] = np.log(df[s]/df[s].shift(1))
+    if log__:
+        df = np.log(df/df.shift(1))
+    else:
+        df = df.pct_change()
     
-    df.fillna(0, inplace=True)
+    df.dropna(inplace=True)
     return df
 
 def cumsum(symbols, df):
@@ -53,6 +53,13 @@ def cross_vars(symbols, df, lmbd=.99, ewma=True, deno=False):
     df.fillna(0, inplace=True)
     return df
 
+def beta_by_ewma(symbols, df_cov):
+    symbols.remove('MRKT') 
+    for s in symbols:
+        k_cov_mrkt = f'{s}_MRKT'
+        df_cov[f'B_{s}'] = df_cov[k_cov_mrkt] / df_cov['MRKT_ewma']
+    
+    return df_cov
 
 def cross_matrix(symbols, df, lmbd, ewma=True, deno=False):
     df_rets = returns(symbols, df, deno)

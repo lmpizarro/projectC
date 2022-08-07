@@ -1,7 +1,9 @@
+from re import I
 from typing import List, Tuple
 import numpy as np
 from calcs import (cumsum, returns, vars, cross_vars)
 from denoisers.butter.filter import min_lp
+from plot.ploter import plot_stacked
 
 def get_cross_var_keys(symbols):
     keys = []
@@ -104,10 +106,12 @@ def min_ewma_port(symbols, df, name='inv'):
 import yfinance as yf
 from datetime import date
 
-def download(symbols, years=10, denoise=False):
+def download(symbols, years=10, denoise=False, YTD=True):
     symbols.sort()
     c_year = date.today().year
     c_month = date.today().month
+    if YTD: c_month = 1
+
     begin = f'{c_year-years}-{c_month}-2'
     df = yf.download(symbols, begin)['Adj Close']
 
@@ -117,8 +121,6 @@ def download(symbols, years=10, denoise=False):
 
         re = {f'{s}_deno':s for s in symbols}
         df.rename(columns=re, inplace=True)
-
-    
 
     return df
 
@@ -155,7 +157,7 @@ def symbols_returns(symbols, years=10):
     """
         include market returns
     """
-    df = download(symbols, years=years)
+    df = download(symbols, years=years, denoise=False)
 
     df_mrkt, _ = mrkt_returns(years=years)
     df_rets = returns(symbols, df)
@@ -175,6 +177,7 @@ def cum_returns(df_rets):
 
     return df_accum
 
+
 def mrkt_diffs(df_rets):
     df_cu = cum_returns(df_rets)
 
@@ -182,7 +185,7 @@ def mrkt_diffs(df_rets):
     symbols.remove('MRKT_csum')
 
     for s in symbols:
-        df_cu[s] = (df_cu[s] - df_cu['MRKT_csum'])
+        df_cu[s] = (df_cu[s])/df_cu['MRKT_csum']
 
     df_cu.drop(columns=['MRKT_csum'])
     re = {s:s.split('_')[0]for s in symbols}
@@ -191,6 +194,30 @@ def mrkt_diffs(df_rets):
 
     return df_cu
 
+
+def periodic_returns(df_rets, len_period=int(252/3)):
+
+    symbols = df_rets.keys()
+
+    periods = int(len(df_rets) / len_period) + 1
+    if periods > 1:
+        l_periods = [i for i in range(periods) for j in range(len_period)]
+
+        l_periods = l_periods[:-(len(l_periods)  - len(df_rets))]
+
+    else:
+        raise ValueError
+    df_c = copy.deepcopy(df_rets)
+
+    df_c['period'] = np.array(l_periods)
+
+    for s in symbols:
+        df_c[s] = df_c[['period', s]].groupby('period').cumsum()
+    
+
+    # df_c.drop(columns=['period'], inplace=True)
+
+    return df_c
 
 
 def variances(df_rets, lmbd=.94, ewma=True):
@@ -203,49 +230,47 @@ def variances(df_rets, lmbd=.94, ewma=True):
     df.drop(columns=[f'{s}_filt' for s in symbols], inplace=True)
     return df
 
-if __name__ == '__main__':
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-    import matplotlib.pyplot as plt
-    import pandas as pd
-    import seaborn as sns
 
+def test_mrkt_returns():
     df, c_port = mrkt_returns()
     print(df.tail())
 
     plt.plot(df['MRKT'])
     plt.show()
+
     plt.plot(df['MRKT_csum'])
     plt.show()
+
+def test_periodic_returns():
+
+    symbols = ['AAPL', 'MSFT', 'AMZN', 'KO']
+    df_rets = symbols_returns(symbols, years=20)
+    periodic_rtrns = periodic_returns(df_rets)
+    plot_stacked(symbols, periodic_rtrns, k='', title='periodic_returns')
+    plt.show()
+
+
+if __name__ == '__main__':
 
     symbols = ['AAPL', 'MSFT', 'AMZN', 'TSLA', 'BRK-B', 'KO', 'NVDA', 'JNJ', 'META', 'PG', 'MELI', 'PEP', 'AVGO']
     symbols = ['AAPL', 'MSFT', 'AMZN', 'KO']
 
-    df_rets = symbols_returns(symbols, years=20)
+    df_rets = symbols_returns(symbols, years=10)
     cum_ret = cum_returns(df_rets)
     covaria = variances(df_rets, ewma=False)
 
-    mrkt_rls = mrkt_diffs(df_rets)
-    print(mrkt_rls.tail())
-    print(mrkt_rls.keys())
-    plt.plot(mrkt_rls)
-    plt.show()
-    input()
-
-    print(df_rets.tail(10))
-
-    plt.plot(df_rets)
-    plt.show()
-
+    print(cum_ret.tail(10))
+    
+    plot_stacked(symbols, df_rets, k='', title='returns')
+    plot_stacked(symbols, cum_ret, k='_csum', title='c_returns')
+    plot_stacked(symbols, covaria, k='_ewma', title='covaria')
+    plot_stacked(symbols, covaria, k='_MRKT', title='covaria_mrkt', skip=True)
     sns.pairplot(df_rets)
     plt.show()
 
-
-    plt.plot(cum_ret)
-    plt.show()
-
-    print(covaria.keys())
-    plt.plot(covaria)
-    plt.show()
     
     from numpy import linalg as LA
     symbols.remove('MRKT')
