@@ -1,9 +1,11 @@
+from difflib import diff_bytes
 from re import I
 from typing import List, Tuple
 import numpy as np
 from calcs import (cumsum, returns, vars, cross_vars)
 from denoisers.butter.filter import min_lp
 from plot.ploter import plot_stacked
+import pandas as pd
 
 def get_cross_var_keys(symbols):
     keys = []
@@ -106,6 +108,18 @@ def min_ewma_port(symbols, df, name='inv'):
 import yfinance as yf
 from datetime import date
 
+def extract_from_to(df):
+    day0 = df.head(1).iloc[0].name
+    day1 = df.tail(1).iloc[0].name
+    diff_ = (day1 - day0) / np.timedelta64(1, 'D')
+    start = str(day0).split()[0]
+    end = str(day1).split()[0]
+
+    return start, end
+
+
+
+
 def download(symbols, years=10, denoise=False, YTD=True):
     symbols.sort()
     c_year = date.today().year
@@ -122,7 +136,16 @@ def download(symbols, years=10, denoise=False, YTD=True):
         re = {f'{s}_deno':s for s in symbols}
         df.rename(columns=re, inplace=True)
 
-    return df
+    start_, end_ = extract_from_to(df=df)
+    return df, start_, end_
+
+def time_index_from_to(start='2000-01-01', end='2022-06-30', freq='6M'):
+    time_index = pd.date_range(start=start, end=end, freq=freq)
+    time_index_from = list(time_index[:-1])
+    time_index_to = list(time_index[1:])
+
+    return time_index_from, time_index_to
+
 
 def custom_port(ct_port: List[Tuple[str, float]],
                 years=10,
@@ -132,7 +155,7 @@ def custom_port(ct_port: List[Tuple[str, float]],
     symbols = [t[0] for t in ct_port]
     weights = np.asarray([w[1] for w in ct_port])
     weights = weights / weights.sum()
-    df = download(symbols, years=years)
+    df, _, _ = download(symbols, years=years)
 
     df_rets = returns(symbols, df)
     
@@ -157,7 +180,7 @@ def symbols_returns(symbols, years=10):
     """
         include market returns
     """
-    df = download(symbols, years=years, denoise=False)
+    df, _, _ = download(symbols, years=years, denoise=False)
 
     df_mrkt, _ = mrkt_returns(years=years)
     df_rets = returns(symbols, df)
@@ -234,6 +257,13 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
+def test_download():
+    symbols = ['MSFT', 'KO']
+
+    dfs, from_, to_ = download(symbols=symbols, years=10)
+
+    print(from_, to_, len(dfs))
+
 def test_mrkt_returns():
     df, c_port = mrkt_returns()
     print(df.tail())
@@ -252,26 +282,14 @@ def test_periodic_returns():
     plot_stacked(symbols, periodic_rtrns, k='', title='periodic_returns')
     plt.show()
 
+def test_covaria():
 
-if __name__ == '__main__':
-
-    symbols = ['AAPL', 'MSFT', 'AMZN', 'TSLA', 'BRK-B', 'KO', 'NVDA', 'JNJ', 'META', 'PG', 'MELI', 'PEP', 'AVGO']
     symbols = ['AAPL', 'MSFT', 'AMZN', 'KO']
-
     df_rets = symbols_returns(symbols, years=10)
-    cum_ret = cum_returns(df_rets)
     covaria = variances(df_rets, ewma=False)
-
-    print(cum_ret.tail(10))
-    
-    plot_stacked(symbols, df_rets, k='', title='returns')
-    plot_stacked(symbols, cum_ret, k='_csum', title='c_returns')
     plot_stacked(symbols, covaria, k='_ewma', title='covaria')
     plot_stacked(symbols, covaria, k='_MRKT', title='covaria_mrkt', skip=True)
-    sns.pairplot(df_rets)
-    plt.show()
 
-    
     from numpy import linalg as LA
     symbols.remove('MRKT')
     for index, row in covaria.iterrows():
@@ -285,3 +303,25 @@ if __name__ == '__main__':
             print(index, err, a)
 
     print(covaria.head())
+
+if __name__ == '__main__':
+
+    test_download()
+
+    exit()
+
+    symbols = ['AAPL', 'MSFT', 'AMZN', 'TSLA', 'BRK-B', 'KO', 'NVDA', 'JNJ', 'META', 'PG', 'MELI', 'PEP', 'AVGO']
+    symbols = ['AAPL', 'MSFT', 'AMZN', 'KO']
+
+
+    df_rets = symbols_returns(symbols, years=10)
+    cum_ret = cum_returns(df_rets)
+
+    print(cum_ret.tail(10))
+    
+    plot_stacked(symbols, df_rets, k='', title='returns')
+    plot_stacked(symbols, cum_ret, k='_csum', title='c_returns')
+    sns.pairplot(df_rets)
+    plt.show()
+
+    
