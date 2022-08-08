@@ -36,19 +36,21 @@ def array_periods(t_len=105, per_len=10):
     return np.array(l_periods)
 
 
-def periodic_returns(df_rets, len_period=int(252/3)):
-
+def periodic_returns(df_rets):
     df_c = copy.deepcopy(df_rets)
 
-    df_c['period'] = array_periods(len(df_rets), len_period)
-
-    print(df_c.tail(20))
-
-    symbols = df_rets.keys()
+    symbols = list(df_rets.keys())
+    symbols.remove('period')
     for s in symbols:
         df_c[s] = df_c[['period', s]].groupby('period').cumsum()
-    
-    # df_c.drop(columns=['period'], inplace=True)
+
+    return df_c
+
+def add_periods(df_rets, len_period=int(252/3)):
+
+    df_c = copy.deepcopy(df_rets)
+    df_c['period'] = array_periods(len(df_rets), len_period)
+
     df_c['END'] = df_c['period'].diff(-1)
     df_c['BEGIN'] = df_c['period'].diff()
 
@@ -57,8 +59,6 @@ def periodic_returns(df_rets, len_period=int(252/3)):
     
     df_c.drop(columns=['END'], inplace=True)
     df_c.drop(columns=['BEGIN'], inplace=True)
-
-    # plot_stacked(symbols=symbols, df=df_filtered, k='')
 
     return df_c, df_beg.index, df_end.index
 
@@ -72,24 +72,37 @@ def test_periodic_returns():
     df_c['sum'] = df_c.sum(axis=1)
     df_c['csum'] = df_c['sum'].cumsum()
 
+    print(df_c.head(20))
+    
     plt.plot(df_c['csum'])
     plt.show()
 
-    df_pridc, beg_index, end_index = periodic_returns(df_rets, len_period=60)
-    plot_stacked(symbols, df_pridc, k='', title='periodic_returns')
+    plot_stacked(symbols, df_rets, k='', title='returns')
     plt.show()
+
+    df_pridc, beg_index, end_index = add_periods(df_rets, len_period=10)
+
+    df_pridc = periodic_returns(df_pridc)
+
     df_pridc.drop(columns=['MRKT', 'period'], inplace=True)
 
     for i, beg in enumerate(beg_index):
         en_d = end_index[i]
-        print((df_rets[beg:en_d].mean()*len(df_rets[beg:en_d])))
-
-
+        # print((df_rets[beg:en_d].mean()*len(df_rets[beg:en_d])))
 
     df_c = weights * df_pridc
     df_c['sum'] = df_c.sum(axis=1)
 
+    return_ends = df_c.loc[end_index]
+    return_ends['csum'] = return_ends['sum'].cumsum()
+    print(return_ends)
+
+    plt.plot(return_ends['csum'])
+    plt.show()
+
+
     plt.plot(df_c['sum'])
+    plt.axhline(y=0)
     plt.show()
 
     from_, to_ = get_start_end(df_rets)
@@ -99,7 +112,6 @@ def test_periodic_returns():
     for i, tt in enumerate(ti_from):
         # print(tt, ti_to[i])
         pass
-
 
 if __name__ == '__main__':
     test_periodic_returns()
