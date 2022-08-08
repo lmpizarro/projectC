@@ -1,11 +1,8 @@
-from difflib import diff_bytes
-from re import I
 from typing import List, Tuple
 import numpy as np
 from calcs import (cumsum, returns, vars, cross_vars)
 from denoisers.butter.filter import min_lp
 from plot.ploter import plot_stacked
-import pandas as pd
 
 def get_cross_var_keys(symbols):
     keys = []
@@ -43,7 +40,6 @@ def get_cumsum_keys(symbols):
         key_var = s + '_csum'
         keys.append(key_var)
     return keys
-
 
  
 def get_matrix(symbols, row_item):
@@ -108,26 +104,14 @@ def min_ewma_port(symbols, df, name='inv'):
 import yfinance as yf
 from datetime import date
 
-def extract_from_to(df):
-    day0 = df.head(1).iloc[0].name
-    day1 = df.tail(1).iloc[0].name
-    diff_ = (day1 - day0) / np.timedelta64(1, 'D')
-    start = str(day0).split()[0]
-    end = str(day1).split()[0]
-
-    return start, end
-
-
-
-
-def download(symbols, years=10, denoise=False, YTD=True):
+def download(symbols, years=10, denoise=False, YTD=True, end=None):
     symbols.sort()
     c_year = date.today().year
     c_month = date.today().month
     if YTD: c_month = 1
 
     begin = f'{c_year-years}-{c_month}-2'
-    df = yf.download(symbols, begin)['Adj Close']
+    df = yf.download(symbols, begin, end)['Adj Close']
 
     if denoise:
         df = min_lp(symbols, df)
@@ -136,26 +120,20 @@ def download(symbols, years=10, denoise=False, YTD=True):
         re = {f'{s}_deno':s for s in symbols}
         df.rename(columns=re, inplace=True)
 
-    start_, end_ = extract_from_to(df=df)
-    return df, start_, end_
-
-def time_index_from_to(start='2000-01-01', end='2022-06-30', freq='6M'):
-    time_index = pd.date_range(start=start, end=end, freq=freq)
-    time_index_from = list(time_index[:-1])
-    time_index_to = list(time_index[1:])
-
-    return time_index_from, time_index_to
-
+    return df
 
 def custom_port(ct_port: List[Tuple[str, float]],
                 years=10,
                 name='cust'):
+    """
+        ct_port [(symbol0, pct0),(...)...] 
+    """
 
     c_port = sorted(ct_port, key=lambda tup: tup[0])
     symbols = [t[0] for t in ct_port]
     weights = np.asarray([w[1] for w in ct_port])
     weights = weights / weights.sum()
-    df, _, _ = download(symbols, years=years)
+    df = download(symbols, years=years)
 
     df_rets = returns(symbols, df)
     
@@ -180,7 +158,7 @@ def symbols_returns(symbols, years=10):
     """
         include market returns
     """
-    df, _, _ = download(symbols, years=years, denoise=False)
+    df = download(symbols, years=years, denoise=False)
 
     df_mrkt, _ = mrkt_returns(years=years)
     df_rets = returns(symbols, df)
@@ -198,6 +176,7 @@ def cum_returns(df_rets):
     df_accum = cumsum(symbols, df)
     df_accum.drop(columns=symbols, inplace=True)
 
+    # keys symbol_csum
     return df_accum
 
 
@@ -218,31 +197,6 @@ def mrkt_diffs(df_rets):
     return df_cu
 
 
-def periodic_returns(df_rets, len_period=int(252/3)):
-
-    symbols = df_rets.keys()
-
-    periods = int(len(df_rets) / len_period) + 1
-    if periods > 1:
-        l_periods = [i for i in range(periods) for j in range(len_period)]
-
-        l_periods = l_periods[:-(len(l_periods)  - len(df_rets))]
-
-    else:
-        raise ValueError
-    df_c = copy.deepcopy(df_rets)
-
-    df_c['period'] = np.array(l_periods)
-
-    for s in symbols:
-        df_c[s] = df_c[['period', s]].groupby('period').cumsum()
-    
-
-    # df_c.drop(columns=['period'], inplace=True)
-
-    return df_c
-
-
 def variances(df_rets, lmbd=.94, ewma=True):
     df = copy.deepcopy(df_rets)
     symbols = df_rets.keys()
@@ -260,9 +214,9 @@ import seaborn as sns
 def test_download():
     symbols = ['MSFT', 'KO']
 
-    dfs, from_, to_ = download(symbols=symbols, years=10)
+    dfs = download(symbols=symbols, years=10)
 
-    print(from_, to_, len(dfs))
+    print(dfs.tail())
 
 def test_mrkt_returns():
     df, c_port = mrkt_returns()
@@ -272,14 +226,6 @@ def test_mrkt_returns():
     plt.show()
 
     plt.plot(df['MRKT_csum'])
-    plt.show()
-
-def test_periodic_returns():
-
-    symbols = ['AAPL', 'MSFT', 'AMZN', 'KO']
-    df_rets = symbols_returns(symbols, years=20)
-    periodic_rtrns = periodic_returns(df_rets)
-    plot_stacked(symbols, periodic_rtrns, k='', title='periodic_returns')
     plt.show()
 
 def test_covaria():
@@ -306,7 +252,7 @@ def test_covaria():
 
 if __name__ == '__main__':
 
-    test_download()
+    test_download() 
 
     exit()
 

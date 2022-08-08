@@ -211,11 +211,11 @@ def main():
 
     p.mkdir(exist_ok=True)
 
-    file_name = 'sp500-2022-07-30.csv'
+    file_name = 'sp500-2022-08-13.csv'
 
-    # scrap_sp500(p, file_name, max_n=10)
+    scrap_sp500(p, file_name, max_n=1000)
 
-    filter_df1(p, file_name)
+    # filter_df1(p, file_name)
 
 def cedear_not_in_sp500(max_n=10):
     cedears = scrap_cedear_rava()
@@ -233,7 +233,6 @@ if __name__ == '__main__':
     ce = scrap_cedear_rava()
     print(len(ce))
     print(ce)
-
 
     print('\n')
     print('\n')
