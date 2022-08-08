@@ -80,7 +80,7 @@ def test_periodic_returns():
     plot_stacked(symbols, df_rets, k='', title='returns')
     plt.show()
 
-    df_pridc, beg_index, end_index = add_periods(df_rets, len_period=10)
+    df_pridc, beg_index, end_index = add_periods(df_rets, len_period=250)
 
     df_pridc = periodic_returns(df_pridc)
 
