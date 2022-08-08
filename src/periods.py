@@ -53,12 +53,10 @@ def periodic_returns(df_rets, len_period=int(252/3)):
     df_c['BEGIN'] = df_c['period'].diff()
 
     df_end = df_c[df_c['END'] != 0]
-    df_c.drop(columns=['END'], inplace=True)
-    print(df_end.index)
-
     df_beg = df_c[df_c['BEGIN'] != 0]
+    
+    df_c.drop(columns=['END'], inplace=True)
     df_c.drop(columns=['BEGIN'], inplace=True)
-    print(df_beg.index)
 
     # plot_stacked(symbols=symbols, df=df_filtered, k='')
 
@@ -77,15 +75,14 @@ def test_periodic_returns():
     plt.plot(df_c['csum'])
     plt.show()
 
-    df_pridc, beg_index, end_index = periodic_returns(df_rets, len_period=15)
+    df_pridc, beg_index, end_index = periodic_returns(df_rets, len_period=60)
     plot_stacked(symbols, df_pridc, k='', title='periodic_returns')
     plt.show()
     df_pridc.drop(columns=['MRKT', 'period'], inplace=True)
 
     for i, beg in enumerate(beg_index):
         en_d = end_index[i]
-        print(beg, en_d)
-        print(df_rets[beg:en_d])
+        print((df_rets[beg:en_d].mean()*len(df_rets[beg:en_d])))
 
 
 
@@ -100,7 +97,8 @@ def test_periodic_returns():
     ti_from, ti_to = index_start_end(start=from_, end=to_)
 
     for i, tt in enumerate(ti_from):
-        print(tt, ti_to[i])
+        # print(tt, ti_to[i])
+        pass
 
 
 if __name__ == '__main__':
