@@ -61,7 +61,7 @@ def beta_by_ewma(symbols, df_cov):
     
     return df_cov
 
-def cross_matrix(symbols, df, lmbd, ewma=True, deno=False):
+def cross_matrix(symbols, df, lmbd=0.94, ewma=True, deno=False):
     df_rets = returns(symbols, df, deno)
     df_rets = vars(symbols, df_rets, lmbd, ewma=ewma)
     df_rets = cross_vars(symbols, df_rets, lmbd, ewma=ewma)

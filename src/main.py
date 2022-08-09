@@ -1,15 +1,18 @@
+from re import A
 import yfinance as yf
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import copy
 from plot.ploter import plot_stacked
-from calcs import variances
 from portfolios import (min_ewma_port, 
                         equal_weight_port,
                         get_matrix, 
                         get_cross_var_keys, 
-                        get_ewma_keys)                   
+                        get_ewma_keys,
+                        variances,
+                        returns,
+                        download)                   
 
 
 
@@ -125,84 +128,137 @@ def control_var_key(symbol, df):
     control_ = ((f_ema - s_ema)<0)
     return control_
 
-# 45 35 20
-np.random.seed(1)
 symbols = ['KO', 'PEP', 'PG', 'AAPL', 'JNJ', 'AMZN', 'DE', 'CAT', 'META', 'MSFT', 'ADI']
-symbols = ['PG', 'PEP', 'AAPL']
-# symbols = ['^DJI', '^GSPC', '^IXIC', '^RUT']
-symbols.sort()
+symbols = ['MSFT', 'AVGO', 'PG', 'PEP', 'AAPL', 'KO', 'LMT', 'TSLA', 'ADI', 'MELI', 'JNJ', 'SPY', 'AMZN', 'META']
+
+
+def test01():
+
+    symbols = ['PG', 'PEP', 'AAPL']
+    np.random.seed(1)
+    symbols.sort()
+
+    df1, w = min_ewma_port(symbols)
+
+    df, w1 = equal_weight_port(symbols)
+    print(df.keys())
+
+    print(w, w1)
+    plt.plot(df1['inv_port'])
+    plt.plot(df['equal_port'], 'k')
+    plt.show()
+    plt.plot(df['equal_rela'].cumsum())
+    plt.show()
+
+if __name__ == '__main__':
+    symbols = ['MSFT', 'AVGO', 'PG', 'PEP', 'SPY']
+
+    df = download(symbols=symbols, years=10)
+    df_rets = returns(symbols, df)
+
+    data_neg = {}
+    data_gt = {}
+    for s in symbols:
+        lt_zero = df_rets[s][df_rets[s] < 0]
+        gt_zero = df_rets[s][df_rets[s] > 0]
+        if s not in data_neg:
+            data_neg[s] = {'ticker':s}
+        if s not in data_gt:
+            data_gt[s] = {'ticker':s}
+
+        
+        data_neg[s]['mean'] = lt_zero.mean()
+        data_neg[s]['dev'] = lt_zero.std()
+        data_neg[s]['count'] = lt_zero.count()
+
+        data_gt[s]['mean'] = gt_zero.mean()
+        data_gt[s]['dev'] = gt_zero.std()
+        data_gt[s]['count'] = gt_zero.count()
+
+    df_neg = pd.DataFrame.from_dict(data_neg, orient='index' )
+    df_neg = df_neg.set_index('ticker')  
+    df_gt = pd.DataFrame.from_dict(data_gt, orient='index')
+    df_gt = df_gt.set_index('ticker')
+
+    # df_gt['count'] = df_gt['count'] / df_gt['count'].loc['SPY']
+    # df_gt['mean'] = df_gt['mean'] / df_gt['mean'].loc['SPY']
+    # df_gt['dev'] = df_gt['dev'] / df_gt['dev'].loc['SPY']
+    # df_gt['sum'] = df_gt.sum(axis=1)
+    # df_gt.drop('SPY', inplace=True)
+
+    # df_neg['count'] = df_neg['count'].loc['SPY'] / df_neg['count'] 
+    # df_neg['mean'] = df_neg['mean'].loc['SPY'] / df_neg['mean'] 
+    # df_neg['dev'] = df_neg['dev'].loc['SPY'] / df_neg['dev'] 
+    # df_neg['sum'] = df_neg.sum(axis=1)
+    # df_neg.drop('SPY', inplace=True)
+
+    # df_gt['total'] = df_neg['sum'] + df_gt['sum']
+    # total = df_gt.total[symbols].sum()
+    
+    # df_gt.total = df_gt.total / total
+    print(df_neg)
+    print(df_gt)
+    # print(total)
+    # print(df_gt['total'][symbols].sum())
+
+    exit()
+    df = yf.download(symbols, '2015-2-1')['Adj Close']
+    df_prices = copy.deepcopy(df)
 
 
 
+    lmbd = .94
+    ewma = False
 
-df = yf.download(symbols, '2015-2-1')['Adj Close']
-df_prices = copy.deepcopy(df)
+    df_ewma = variances(df, lmbd, ewma=ewma)
 
-lmbd = .94
-ewma = False
+    print(df_prices.tail())
+    print(df_ewma.tail())
 
-df_rets = variances(symbols, df, lmbd, ewma=ewma)
+    plot_stacked(symbols, df_ewma, '_ewma')
 
-print(df_prices.tail())
-print(df_rets.tail())
-
-plot_stacked(symbols, df_rets, '_filt')
-plot_stacked(symbols, df_rets, '_ewma')
-
-df, w = min_ewma_port(symbols,df)
-df, w1 = equal_weight_port(symbols,df)
-print(w, w1)
-plt.plot(df['inv_port'])
-plt.plot(df['equal_port'], 'k')
-
-plt.show()
-
-plt.plot(df['equal_rela'].cumsum())
-plt.show()
+    print(df_ewma.keys())
+    print(df.keys())
 
 
 
-exit()
+    # max_sharpe(symbols, df)
+    # min_var(symbols, df)
+
+    #plt.plot(df.KO_var)
+    #plt.plot(df.PG_var> df.KO_var)
+    #plt.plot(df.AAPL_var > df.KO_var, 'r')
+    # plt.plot(df.AAPL_var/ df.AAPL_ewm, 'r')
+    plt.plot(df.PG_csum, 'g')
+    plt.show()
+
+    print(df.KO.describe())
+    control_ = control_var_key('PG', df)
+    df.PG = df.PG*control_
+
+    plt.plot(df.PG.cumsum())
+    plt.show()
+
+    # probar n portfolios aleatorios
+    # https://medium.com/@Piotr_Szymanski/arithmetic-vs-log-stock-returns-in-python-7f7c3cff125
 
 
-# max_sharpe(symbols, df)
-# min_var(symbols, df)
+    ret_df = df[get_return_keys(symbols)]
 
-#plt.plot(df.KO_var)
-#plt.plot(df.PG_var> df.KO_var)
-#plt.plot(df.AAPL_var > df.KO_var, 'r')
-# plt.plot(df.AAPL_var/ df.AAPL_ewm, 'r')
-plt.plot(df.PG_csum, 'g')
-plt.show()
-
-print(df.KO.describe())
-control_ = control_var_key('PG', df)
-df.PG = df.PG*control_
-
-plt.plot(df.PG.cumsum())
-plt.show()
-
-# probar n portfolios aleatorios
-# https://medium.com/@Piotr_Szymanski/arithmetic-vs-log-stock-returns-in-python-7f7c3cff125
-
-
-ret_df = df[get_return_keys(symbols)]
-
-port_ret = ret_df.dot(equal_weights)
-dff = port_ret.ewm(alpha=1-lmbd).mean()
-dff = (dff**2).ewm(alpha=1-lmbd).mean()
-port = port_ret.cumsum()
-
-plt.plot(dff)
-
-for i in range(3):
-    w, wc = weights_func(len(symbols))
-    port_ret = ret_df.dot(w)
+    port_ret = ret_df.dot(equal_weights)
     dff = port_ret.ewm(alpha=1-lmbd).mean()
     dff = (dff**2).ewm(alpha=1-lmbd).mean()
+    port = port_ret.cumsum()
+
     plt.plot(dff)
 
-plt.show()
+    for i in range(3):
+        w, wc = weights_func(len(symbols))
+        port_ret = ret_df.dot(w)
+        dff = port_ret.ewm(alpha=1-lmbd).mean()
+        dff = (dff**2).ewm(alpha=1-lmbd).mean()
+        plt.plot(dff)
 
-print(port.tail())
+    plt.show()
 
+    print(port.tail())

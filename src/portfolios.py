@@ -1,8 +1,10 @@
+from os import sync
 from typing import List, Tuple
 import numpy as np
-from calcs import (cumsum, returns, vars, cross_vars)
+from calcs import (cumsum, returns, vars, cross_vars, cross_matrix)
 from denoisers.butter.filter import min_lp
 from plot.ploter import plot_stacked
+import pandas as pd
 
 def get_cross_var_keys(symbols):
     keys = []
@@ -54,17 +56,20 @@ def get_matrix(symbols, row_item):
             a[j,i] = row_item[key]
     return a
 
-def equal_weight_port(symbols, df, name='equal'):
-    df = cumsum(symbols, df)
+def equal_weight_port(symbols, years=10, name='equal'):
+
     data_risk = []
     data_rel = []
-    ret_keys = get_filt_keys(symbols)
-    rets = df[ret_keys]
+
+    df = download(symbols=symbols, years=years)
+    df = cross_matrix(symbols=symbols, df=df)
+    df_rets = df[get_filt_keys(symbols)]
+
 
     w = np.array([1/len(symbols)] * len(symbols))
     for index, row in df.iterrows():
         
-        return_ = np.matmul(w, rets.loc[index])
+        return_ = np.matmul(w, df_rets.loc[index])
         a = get_matrix(symbols, row_item=row)
         risk = np.matmul(w, np.matmul(a, w))
         data_risk.append(risk)
@@ -75,13 +80,16 @@ def equal_weight_port(symbols, df, name='equal'):
 
     return df, w
 
-def min_ewma_port(symbols, df, name='inv'):
+def min_ewma_port(symbols:List[str], years=10, name: str='inv'):
+    df = download(symbols=symbols, years=years)
+    df_rets = cross_matrix(symbols=symbols, df=df)
+    # df_rets = df[get_filt_keys(symbols)]
+
     data = []
     w_old = np.zeros(len(symbols))
     N = 0
     w = w_old
-    for index, row in df.iterrows():
-
+    for index, row in df_rets.iterrows():
         a = get_matrix(symbols, row_item=row)
         data.append(np.matmul(w, np.matmul(a, w)))
 
@@ -96,9 +104,9 @@ def min_ewma_port(symbols, df, name='inv'):
                 w_old = w
                 N = N + 1  
 
-    df[f'{name}_port'] = np.array(data)
+    df_rets[f'{name}_port'] = np.array(data)
 
-    return df, w
+    return df_rets, w
 
 
 import yfinance as yf
