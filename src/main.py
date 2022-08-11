@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import copy
+from calcs import cumsum
 from plot.ploter import plot_stacked
 from portfolios import (min_ewma_port, 
                         equal_weight_port,
@@ -150,12 +151,77 @@ def test01():
     plt.plot(df['equal_rela'].cumsum())
     plt.show()
 
+def min_distance(symbols, years=10):
+    df = download(symbols=symbols, years=14)
+    df_rets = returns(symbols, df)
+    df_c = cumsum(symbols=symbols, df=df_rets)
+    
+    from scipy.optimize import linprog
+
+    symbols.remove('SPY')
+
+    for s in symbols:
+        df_c[f'{s}_d'] = df_c['SPY_csum'] - df_c[f'{s}_csum']
+
+    print(df_c[[f'{s}_d' for s in symbols]].head())
+
+    # plt.plot(df_c[[f'{s}_d' for s in symbols]])
+    # plt.show()
+
+    bounds = [(.02, 5*1/len(symbols))]*len(symbols)
+    A = [[1]*len(symbols)]
+    print(bounds)
+    print(A)
+    w_old = np.array([1/len(symbols)]*len(symbols))
+    data = []
+    counter = 0 
+    for index, row in df_c.iterrows():
+
+        r = row[[f'{s}_d' for s in symbols]]
+        rx = r.copy()
+        mean = np.dot(w_old, r)
+        rx = rx + np.abs(r.min())*2
+        rx_inv = (1 / rx ) ** 0.25
+        rx_inv_sum = rx_inv.sum()
+        w_inv = rx_inv / rx_inv_sum
+
+        new_d = np.dot(w_old,row[[f'{s}_csum' for s in symbols]])
+        data.append(new_d)
+        counter += 1
+        if not counter%250:
+            diference = df_c.SPY_csum.loc[index] - np.dot(w_inv,row[[f'{s}_csum' for s in symbols]])
+            print(f'update {counter} {diference} {100*np.abs(np.array(w_old) - np.array(w_inv)).sum()}')
+            w_old = w_inv
+        # print(rx.min(), rx.max(), rx.median(),  )
+        # r = np.reshape(np.array(r), (1,-1))
+        # pseudo inverse
+        # r = np.matmul(np.array(r).T, np.array(r))
+        # print(np.linalg.pinv(r))
+        # x = np.linalg.lstsq(r, b, rcond=None)
+        # print(x)
+
+        # b =np.reshape(np.array([0]), (1,-1))
+        # res = linprog(r, A_eq = A, b_eq=[1], bounds=bounds)
+        # print(res.x.sum(), res.x.T@r)
+    df_c['data'] = np.array(data)
+    plt.plot(df_c.data)
+    plt.plot(df_c.SPY_csum)
+    plt.show()
 if __name__ == '__main__':
-    symbols = ['MSFT', 'AVGO', 'PG', 'PEP', 'SPY']
+    symbols = ['MSFT', 'AVGO', 'PG', 'BIL', 'SPY']
+    symbols = ['BIL', 'HON', 'CL', 'AVGO', 'PG', 'PEP', 'XOM', 'KO', 'TXN', 'MO', 'XOM',
+               'PM', 'KO', 'LMT', 'INTC', 'ADI', 'HD', 'JNJ', 'WFC', 'MCD', 'T', 'GS', 'WMT', 
+               'SPY']
+
+    symbols = ['BIL', 'HON', 'CL', 'PG', 'PEP', 'XOM', 'KO', 'TXN', 'MO', 'XOM', 'SPY']
+
+
+    min_distance(symbols)
+
+    exit()
 
     df = download(symbols=symbols, years=10)
     df_rets = returns(symbols, df)
-
     data_neg = {}
     data_gt = {}
     for s in symbols:
