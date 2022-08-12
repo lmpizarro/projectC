@@ -1,4 +1,5 @@
-from os import sync
+from os import PRIO_USER, sync
+from tkinter import W
 from typing import List, Tuple
 import numpy as np
 from calcs import (cumsum, returns, vars, cross_vars, cross_matrix)
@@ -258,9 +259,111 @@ def test_covaria():
 
     print(covaria.head())
 
+def tracker01(symbols):
+    df = download(symbols=symbols, years=14)
+    df_rets = returns(symbols, df)
+    df_c = cumsum(symbols=symbols, df=df_rets)
+
+    symbols.remove('SPY')
+
+    for s in symbols:
+        df_c[f'{s}_d'] = df_c['SPY_csum'] - df_c[f'{s}_csum']
+
+    print(df_c[[f'{s}_d' for s in symbols]].head())
+
+    w_old = np.array([1/len(symbols)]*len(symbols))
+    data = []
+    counter = 0 
+    for index, row in df_c.iterrows():
+
+        r = row[[f'{s}_d' for s in symbols]]
+        rx = r.copy()
+        rx = rx + np.abs(r.min())*2
+        rx_inv = (1 / rx ) ** 1
+        rx_inv_sum = rx_inv.sum()
+        w_inv = rx_inv / rx_inv_sum
+
+        new_d = np.dot(w_old,row[[f'{s}_csum' for s in symbols]])
+        data.append(new_d)
+        counter += 1
+        if not counter%250:
+            diference = df_c.SPY_csum.loc[index] - np.dot(w_inv,row[[f'{s}_csum' for s in symbols]])
+            print(f'update {counter} {diference} {100*np.abs(np.array(w_old) - np.array(w_inv)).sum()}')
+            w_old = w_inv
+    
+    df_c['data'] = np.array(data)
+    plt.plot(df_c.data)
+    plt.plot(df_c.SPY_csum)
+    plt.show()
+
+from scipy import signal
+
+def tracker02(symbols):
+    df = download(symbols=symbols, years=14)
+    df_rets = returns(symbols, df)
+    df_c = cumsum(symbols=symbols, df=df_rets)
+
+    def gaussian(x, mu, sigma):
+        window = np.exp(-(x-mu)**2/(sigma**2)) / (sigma*np.sqrt(np.pi))
+        return window
+
+    def weights(rx, mu, sigma):
+        rx_inv = gaussian(rx, mu, sigma)
+        rx_inv_sum = rx_inv.sum()
+        w_inv = rx_inv / rx_inv_sum
+        return w_inv
+
+    def error(df_c, index, w_inv, row):
+        return df_c.SPY_csum.loc[index] - np.dot(w_inv,row[[f'{s}_csum' for s in symbols]])
+
+    symbols.remove('SPY')
+
+    for s in symbols:
+        df_c[f'{s}_d'] = df_c['SPY_csum'] - df_c[f'{s}_csum']
+
+    print(df_c[[f'{s}_d' for s in symbols]].head())
+
+    w_old = np.array([1/len(symbols)]*len(symbols))
+    data = []
+    counter = 0 
+    for index, row in df_c.iterrows():
+
+        r = row[[f'{s}_d' for s in symbols]]
+        rx = r.copy()
+        sigma = 2*(rx.max() - rx.min())
+        mu = rx.mean()
+
+        
+        winvs = [weights(rx, m , sigma) for m in np.linspace(rx.min(), rx.max(), 10)]
+        new_d = np.dot(w_old,row[[f'{s}_csum' for s in symbols]])
+        data.append(new_d)
+        counter += 1
+        if not counter%250:
+            minimizer = {}
+            for w_inv in winvs:
+                difference = int(1e6*float(error(df_c, index, w_inv, row)))
+                minimizer[np.abs(difference)] = w_inv
+            best = min(minimizer.keys())
+            w_inv = minimizer[best]
+            print(f'update {best/1e6} {100*np.abs(np.array(w_old) - np.array(w_inv)).sum()}')
+            w_old = w_inv
+    
+    df_c['data'] = np.array(data)
+    plt.plot(df_c.data)
+    plt.plot(df_c.SPY_csum)
+    plt.show()
+
+
+def test_tracker():
+    symbols = ['BIL', 'HON', 'MSFT', 'PEP', 'XOM', 'KO', 'TXN', 'MO', 'XOM', 'SPY']
+    # symbols = ['BIL', 'HON', 'CL', 'XOM', 'SPY']
+    
+
+    tracker02(symbols)
+
 if __name__ == '__main__':
 
-    test_download() 
+    test_tracker()
 
     exit()
 
