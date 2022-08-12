@@ -1,3 +1,4 @@
+from typing import Dict, Any
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
@@ -11,7 +12,7 @@ urls = {"nasdaq100": "https://www.slickcharts.com/nasdaq100",
         "cedears": "https://www.rava.com/cotizaciones/cedears"}
 
 
-def scrap_slick_chart(url, constituents):
+def scrap_slick_chart(url, constituents) -> Dict[str, Any]:
     resp = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
     soup = BeautifulSoup(resp.text, features='lxml')
     table = soup.find('table')
@@ -26,6 +27,9 @@ def scrap_slick_chart(url, constituents):
         constituents[ticker]['weight'] = weight
         constituents[ticker]['price'] = price
     return constituents
+
+def list_sp500():
+    return scrap_slick_chart(urls['sp500'], {}).keys()
 
 def scrap_cedear_rava():
     url = urls['cedears']

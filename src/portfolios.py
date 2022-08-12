@@ -1,11 +1,8 @@
-from os import PRIO_USER, sync
-from tkinter import W
 from typing import List, Tuple
 import numpy as np
 from calcs import (cumsum, returns, vars, cross_vars, cross_matrix)
 from denoisers.butter.filter import min_lp
 from plot.ploter import plot_stacked
-import pandas as pd
 
 def get_cross_var_keys(symbols):
     keys = []
@@ -115,19 +112,27 @@ from datetime import date
 
 def download(symbols, years=10, denoise=False, YTD=True, end=None):
     symbols.sort()
+    symbols = [s.strip() for s in symbols]
     c_year = date.today().year
     c_month = date.today().month
     if YTD: c_month = 1
 
     begin = f'{c_year-years}-{c_month}-2'
     df = yf.download(symbols, begin, end)['Adj Close']
+    print(df.tail())
+
 
     if denoise:
+
+        if 'BIL' in symbols:
+            symbols.remove('BIL')
         df = min_lp(symbols, df)
         df.drop(columns=symbols, inplace=True)
 
         re = {f'{s}_deno':s for s in symbols}
         df.rename(columns=re, inplace=True)
+    
+    print(df.tail())
 
     return df
 
@@ -299,7 +304,8 @@ def tracker01(symbols):
 from scipy import signal
 
 def tracker02(symbols):
-    df = download(symbols=symbols, years=14)
+    df = download(symbols=symbols, years=14, denoise=False)
+    print(df.tail())
     df_rets = returns(symbols, df)
     df_c = cumsum(symbols=symbols, df=df_rets)
 
@@ -331,23 +337,25 @@ def tracker02(symbols):
         r = row[[f'{s}_d' for s in symbols]]
         rx = r.copy()
         rx_range = rx.max() - rx.min()
-        sigma = 2*rx_range
+        sigma = rx_range
         mu = rx.mean()
 
         
-        winvs = [weights(rx, m, sigma) for m in np.linspace(rx.min(), rx.max(), 10)]
+        winvs = [weights(rx, m, sigma) for m in np.linspace(2*rx.min(), rx.max(), 10)]
         # winvs = [weights(rx, 0, m) for m in np.linspace(rx_range, 4*rx_range, 10)]
         new_d = np.dot(w_old,row[[f'{s}_csum' for s in symbols]])
         data.append(new_d)
         counter += 1
-        if not counter%250:
+        if not counter%60:
             minimizer = {}
             for w_inv in winvs:
                 difference = int(1e6*float(error(df_c, index, w_inv, row)))
                 minimizer[np.abs(difference)] = w_inv
+            print(minimizer)
             best = min(minimizer.keys())
             w_inv = minimizer[best]
-            print(f'update {best/1e6} {100*np.abs(np.array(w_old) - np.array(w_inv)).sum()}')
+            difference = error(df_c, index, w_inv, row)
+            print(f'update {difference} {100*np.abs(np.array(w_old) - np.array(w_inv)).sum()}')
             w_old = w_inv
     
     df_c['data'] = np.array(data)
@@ -356,19 +364,54 @@ def tracker02(symbols):
     plt.show()
 
 
-def test_tracker():
-    symbols = ['BIL', 'HON', 'MSFT', 'PEP', 'XOM', 'KO', 'TXN', 'MO', 'XOM', 'SPY']
-    # symbols = ['BIL', 'HON', 'CL', 'XOM', 'SPY']
+def min_distances():
+
+    import pandas as pd
+    from scraper.scrapers import scrap_cedear_rava, list_sp500
+    ce = scrap_cedear_rava()
+    
+    sp500 = pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')[0]
+
+    oldests_sp500 = list(sp500[sp500.Founded < '2002'].Symbol)
+    print(len(oldests_sp500))
+
+    symbols = [s for s in  oldests_sp500 if s in ce]
+
+    symbols = symbols
+    symbols.append('SPY')
+
+    print(len(symbols))
     
 
+    df = download(symbols=symbols, years=20)
+    df_rets = returns(symbols, df, log__=True)
+    df_rets = cumsum(symbols, df_rets)
+
+    symbols.remove('SPY')
+
+    distances = {}
+    for s in symbols:
+        df_rets[s] = np.abs(df_rets[s] - df_rets.SPY)
+        ds = df_rets[s].sum()
+        distances[s] = ds
+    distances = {k: v for k, v in sorted(distances.items(), key=lambda item: item[1])}
+    return list(distances.keys())
+
+def test_tracker():
+
+    symbols = ['BIL', 'HON', 'MSFT', 'PEP', 'XOM', 'KO', 'TXN', 'MO', 'XOM', 'SPY']
+    # symbols = ['BIL', 'HON', 'CL', 'XOM', 'SPY']
+    symbols_min = min_distances()
+    symbols = symbols_min[:10]
+    # symbols.extend(symbols_min[-5:])
+    symbols.append('BIL')
+    symbols.append('SPY')
     tracker02(symbols)
 
+
 if __name__ == '__main__':
-
-    test_tracker()
-
+    test_tracker()    
     exit()
-
     symbols = ['AAPL', 'MSFT', 'AMZN', 'TSLA', 'BRK-B', 'KO', 'NVDA', 'JNJ', 'META', 'PG', 'MELI', 'PEP', 'AVGO']
     symbols = ['AAPL', 'MSFT', 'AMZN', 'KO']
 
