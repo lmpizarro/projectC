@@ -334,7 +334,8 @@ def tracker02(symbols):
         mu = rx.mean()
 
         
-        winvs = [weights(rx, m , sigma) for m in np.linspace(rx.min(), rx.max(), 10)]
+        winvs = [weights(rx, m, sigma) for m in np.linspace(rx.min(), rx.max(), 10)]
+        winvs = [weights(rx, 0, m) for m in np.linspace(rx.max() - rx.min(), 2*(rx.max() - rx.min()), 10)]
         new_d = np.dot(w_old,row[[f'{s}_csum' for s in symbols]])
         data.append(new_d)
         counter += 1
