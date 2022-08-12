@@ -330,12 +330,13 @@ def tracker02(symbols):
 
         r = row[[f'{s}_d' for s in symbols]]
         rx = r.copy()
-        sigma = 2*(rx.max() - rx.min())
+        rx_range = rx.max() - rx.min()
+        sigma = 2*rx_range
         mu = rx.mean()
 
         
         winvs = [weights(rx, m, sigma) for m in np.linspace(rx.min(), rx.max(), 10)]
-        winvs = [weights(rx, 0, m) for m in np.linspace(rx.max() - rx.min(), 2*(rx.max() - rx.min()), 10)]
+        winvs = [weights(rx, 0, m) for m in np.linspace(rx_range, 2*rx_range, 10)]
         new_d = np.dot(w_old,row[[f'{s}_csum' for s in symbols]])
         data.append(new_d)
         counter += 1
