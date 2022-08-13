@@ -309,18 +309,39 @@ def tracker02(symbols):
     df_rets = returns(symbols, df)
     df_c = cumsum(symbols=symbols, df=df_rets)
 
-    def gaussian(x, mu, sigma):
-        window = np.exp(-(x-mu)**2/(sigma**2)) / (sigma*np.sqrt(np.pi))
-        return window
-
     def weights(rx, mu, sigma):
+        def gaussian(x, mu, sigma):
+            window = np.exp(-(x-mu)**2/(sigma**2)) / (sigma*np.sqrt(np.pi))
+            return window
         rx_inv = gaussian(rx, mu, sigma)
         rx_inv_sum = rx_inv.sum()
         w_inv = rx_inv / rx_inv_sum
         return w_inv
 
-    def error(df_c, index, w_inv, row):
-        return df_c.SPY_csum.loc[index] - np.dot(w_inv,row[[f'{s}_csum' for s in symbols]])
+    def minimizer(ref_time_serie, row, Np=20):
+        col_time_series = row[[f'{s}_csum' for s in symbols]]
+        rx = row[[f'{s}_d' for s in symbols]]
+        sigma = rx.max() - rx.min()
+        range_mu = np.linspace(2*rx.min(), 2*rx.max(), Np)
+        winvs = [weights(rx, m, sigma) for m in range_mu]
+        # winvs = [weights(rx, 0, m) for m in np.linspace(rx_range, 4*rx_range, 10)]
+        dict_minimizer = {}
+        for w_inv in winvs:
+            k_diff = int(1e6*float(error(ref_time_serie, 
+                                             col_time_series, 
+                                             w_inv)))
+
+            dict_minimizer[np.abs(k_diff)] = w_inv
+        best_key = min(dict_minimizer.keys())
+        w_inv = dict_minimizer[best_key]
+        difference = error(ref_time_serie, 
+                           col_time_series, 
+                           w_inv)
+ 
+        return w_inv, difference
+
+    def error(spy_row, row, w_inv):
+        return spy_row - np.dot(w_inv,row)
 
     symbols.remove('SPY')
 
@@ -334,27 +355,17 @@ def tracker02(symbols):
     counter = 0 
     for index, row in df_c.iterrows():
 
-        r = row[[f'{s}_d' for s in symbols]]
-        rx = r.copy()
-        rx_range = rx.max() - rx.min()
-        sigma = rx_range
-        mu = rx.mean()
 
-        
-        winvs = [weights(rx, m, sigma) for m in np.linspace(2*rx.min(), 2*rx.max(), 20)]
-        # winvs = [weights(rx, 0, m) for m in np.linspace(rx_range, 4*rx_range, 10)]
         new_d = np.dot(w_old,row[[f'{s}_csum' for s in symbols]])
         data.append(new_d)
+
         counter += 1
         if not counter%60:
-            minimizer = {}
-            for w_inv in winvs:
-                difference = int(1e6*float(error(df_c, index, w_inv, row)))
-                minimizer[np.abs(difference)] = w_inv
-            print(minimizer)
-            best = min(minimizer.keys())
-            w_inv = minimizer[best]
-            difference = error(df_c, index, w_inv, row)
+
+            ref_time_serie = df_c.SPY_csum.loc[index]
+           
+            w_inv, difference = minimizer(ref_time_serie, row, Np=60)
+
             print(f'update {difference} {100*np.abs(np.array(w_old) - np.array(w_inv)).sum()}')
             w_old = w_inv
     
