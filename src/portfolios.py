@@ -309,14 +309,9 @@ def tracker02(symbols):
     df_rets = returns(symbols, df)
     df_c = cumsum(symbols=symbols, df=df_rets)
 
-    def weights(rx, mu, sigma):
-        def gaussian(x, mu, sigma):
-            window = np.exp(-(x-mu)**2/(sigma**2)) / (sigma*np.sqrt(np.pi))
-            return window
-        rx_inv = gaussian(rx, mu, sigma)
-        rx_inv_sum = rx_inv.sum()
-        w_inv = rx_inv / rx_inv_sum
-        return w_inv
+    def weights(x, mu, sigma):
+        rx_inv = np.exp(-(x-mu)**2/(sigma**2)) / (sigma*np.sqrt(np.pi))
+        return rx_inv / rx_inv.sum()
 
     def minimizer(ref_time_serie, row, Np=20):
         col_time_series = row[[f'{s}_csum' for s in symbols]]
