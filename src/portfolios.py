@@ -322,13 +322,12 @@ def tracker02(symbols):
         # winvs = [weights(rx, 0, m) for m in np.linspace(rx_range, 4*rx_range, 10)]
         dict_minimizer = {}
         for w_inv in winvs:
-            k_diff = int(1e6*float(error(ref_time_serie, 
+            k_diff = np.abs(int(1e6*float(error(ref_time_serie, 
                                              col_time_series, 
-                                             w_inv)))
+                                             w_inv))))
 
-            dict_minimizer[np.abs(k_diff)] = w_inv
-        best_key = min(dict_minimizer.keys())
-        w_inv = dict_minimizer[best_key]
+            dict_minimizer[k_diff] = w_inv
+        w_inv = dict_minimizer[min(dict_minimizer)]
         difference = error(ref_time_serie, 
                            col_time_series, 
                            w_inv)
