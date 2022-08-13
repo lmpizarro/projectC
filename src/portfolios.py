@@ -318,15 +318,13 @@ def tracker02(symbols):
         rx = row[[f'{s}_d' for s in symbols]]
         sigma = rx.max() - rx.min()
         range_mu = np.linspace(2*rx.min(), 2*rx.max(), Np)
-        winvs = [weights(rx, m, sigma) for m in range_mu]
-        # winvs = [weights(rx, 0, m) for m in np.linspace(rx_range, 4*rx_range, 10)]
-        dict_minimizer = {}
-        for w_inv in winvs:
-            k_diff = np.abs(int(1e6*float(error(ref_time_serie, 
-                                             col_time_series, 
-                                             w_inv))))
+        range_s = np.linspace(sigma/2, sigma*2, Np)
+        winvs = [weights(rx, m, s) for m in range_mu for s in range_s]
+        dict_minimizer = {np.abs(int(1e6*float(error(ref_time_serie, 
+                                                     col_time_series, 
+                                                     w_inv)))): w_inv
+                                                     for w_inv in winvs}
 
-            dict_minimizer[k_diff] = w_inv
         w_inv = dict_minimizer[min(dict_minimizer)]
         difference = error(ref_time_serie, 
                            col_time_series, 
@@ -358,7 +356,7 @@ def tracker02(symbols):
 
             ref_time_serie = df_c.SPY_csum.loc[index]
            
-            w_inv, difference = minimizer(ref_time_serie, row, Np=60)
+            w_inv, difference = minimizer(ref_time_serie, row, Np=20)
 
             print(f'update {difference} {100*np.abs(np.array(w_old) - np.array(w_inv)).sum()}')
             w_old = w_inv
