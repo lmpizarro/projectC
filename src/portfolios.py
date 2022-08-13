@@ -317,13 +317,16 @@ def tracker02(symbols):
         col_time_series = row[[f'{s}_csum' for s in symbols]]
         rx = row[[f'{s}_d' for s in symbols]]
         sigma = rx.max() - rx.min()
-        range_mu = np.linspace(2*rx.min(), 2*rx.max(), Np)
-        range_s = np.linspace(sigma/2, sigma*2, Np)
-        winvs = [weights(rx, m, s) for m in range_mu for s in range_s]
+        winvs = [weights(rx, m, s) 
+                 for m in np.linspace(2*rx.min(), 2*rx.max(), Np)
+                 for s in np.linspace(sigma/2, sigma*2, Np)]                                    
+ 
         dict_minimizer = {np.abs(int(1e6*float(error(ref_time_serie, 
                                                      col_time_series, 
                                                      w_inv)))): w_inv
-                                                     for w_inv in winvs}
+                                                     for w_inv in
+                                                     winvs
+                                                    }
 
         w_inv = dict_minimizer[min(dict_minimizer)]
         difference = error(ref_time_serie, 
