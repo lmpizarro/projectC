@@ -3,7 +3,7 @@
 from statsmodels.regression.rolling import RollingOLS
 import statsmodels.api as sm
 from portfolios import download
-from calcs import returns
+from calcs import (returns, beta_by_ewma, cross_matrix)
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.linear_model import LinearRegression
@@ -70,38 +70,72 @@ def rolling_beta_sk(df_rets, N=60):
     
     return df_rets
 
-def rolling_beta_fussion(df_rets, N=60):
-    df_1 = df.copy()
+def rolling_beta_fussion(df, N=60):
+    symbols = list(df.keys())
+    df1 = df.copy()
+
+    df_rets = returns(symbols, df, log__=True)
+
+    df_1 = df_rets.copy()
+
     df_betas2 = rolling_beta_sk(df_rets, N=N)
     df_betas1 = rolling_beta(df_1, N=N)
+
     df_betas1.drop(columns=['MRKT'], inplace=True)
     df_betas2.drop(columns=['MRKT'], inplace=True)
 
     print(df_betas1.tail())
     print(df_betas2.tail())
 
+    symbols.append('MRKT')
+    df1.rename(columns={'SPY':'MRKT'}, inplace=True)
+    df_c = cross_matrix(symbols, df1)
+    betas = beta_by_ewma(symbols, df_c)
+
+    betas.drop(columns=['MRKT'], inplace=True)
+    print(betas.tail())
+
     for s in df_betas2.keys():
-        df_1[s] = .5*df_betas2[s] + .5*df_betas1[s]
+        df_1[s] = .33*df_betas2[s] + .33*df_betas1[s] + .33*betas[s]
 
     return df_1
 
-if __name__ == "__main__":
 
-    symbols = ['TSLA', 'KO', 'AAPL', 'SPY']
-
+def test_betas():
+    symbols = ['TSLA', 'KO', 'AAPL', 'SPY', 'AVGO']
 
     df = download(symbols)
-    df = returns(symbols, df, log__=True)
-
+    df1 = df.copy()
     # df['SPY'] = np.random.normal(.01, .1, size=len(df)) + np.random.normal(.01, .001, size=len(df))
     # df['BIL'] = 5 * df['SPY'] 
     # df['KO'] = .5 * df['SPY'] 
 
     df.rename(columns={'SPY':'MRKT'}, inplace=True)
+    symbols.remove('SPY')
+    symbols.append('MRKT')
 
-    # df_betas = rolling_beta_sk(df, N=120)
     df_betas = rolling_beta_fussion(df, N=120)
 
-    symbols.remove('SPY')
+    symbols.remove('MRKT')    
     plt.plot(df_betas[symbols])
     plt.show()
+
+def test_beta_covar():
+    symbols = ['TSLA', 'KO', 'AAPL', 'SPY', 'AVGO']
+
+    
+    df = download(symbols)
+    df.rename(columns={'SPY':'MRKT'}, inplace=True)
+    
+    symbols.remove('SPY')
+
+    symbols.append('MRKT')
+
+    df = cross_matrix(symbols, df)
+    betas = beta_by_ewma(symbols, df)
+
+    print(betas.tail())
+
+
+if __name__ == "__main__":
+    test_betas()

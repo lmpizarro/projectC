@@ -53,13 +53,15 @@ def cross_vars(symbols, df, lmbd=.99, ewma=True, deno=False):
     df.fillna(0, inplace=True)
     return df
 
+import pandas as pd
 def beta_by_ewma(symbols, df_cov):
+    beta = pd.DataFrame()
     symbols.remove('MRKT') 
     for s in symbols:
         k_cov_mrkt = f'{s}_MRKT'
-        df_cov[f'B_{s}'] = df_cov[k_cov_mrkt] / df_cov['MRKT_ewma']
+        beta[s] = df_cov[k_cov_mrkt] / df_cov['MRKT_ewma']
     
-    return df_cov
+    return beta
 
 def cross_matrix(symbols, df, lmbd=0.94, ewma=True, deno=False):
     df_rets = returns(symbols, df, deno)
