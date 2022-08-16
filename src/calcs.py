@@ -19,7 +19,7 @@ def cumsum(symbols, df):
 
     return df
 
-def vars(symbols, df, lmbd=.99, ewma=True):
+def ewma_vars(symbols, df, lmbd=.99, ewma=True):
     for s in symbols:
         key_filt = s + '_filt'
         key_ewma = s + '_ewma'
@@ -36,7 +36,7 @@ def vars(symbols, df, lmbd=.99, ewma=True):
     df.fillna(0, inplace=True)
     return df
 
-def cross_vars(symbols, df, lmbd=.99, ewma=True, deno=False):
+def ewma_cross_vars(symbols, df, lmbd=.99, ewma=True, deno=False):
     for i in range(len(symbols)):
         for j in range(i+1, len(symbols)):
             s1 = symbols[i]
@@ -65,7 +65,7 @@ def beta_by_ewma(symbols, df_cov):
 
 def cross_matrix(symbols, df, lmbd=0.94, ewma=True, deno=False):
     df_rets = returns(symbols, df, deno)
-    df_rets = vars(symbols, df_rets, lmbd, ewma=ewma)
-    df_rets = cross_vars(symbols, df_rets, lmbd, ewma=ewma)
+    df_rets = ewma_vars(symbols, df_rets, lmbd, ewma=ewma)
+    df_rets = ewma_cross_vars(symbols, df_rets, lmbd, ewma=ewma)
     return df_rets
 

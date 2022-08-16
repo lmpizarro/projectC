@@ -1,6 +1,6 @@
 from typing import List, Tuple
 import numpy as np
-from calcs import (cumsum, returns, vars, cross_vars, cross_matrix)
+from calcs import (cumsum, returns, ewma_vars, ewma_cross_vars, cross_matrix)
 from denoisers.butter.filter import min_lp
 from plot.ploter import plot_stacked
 
@@ -211,11 +211,11 @@ def mrkt_diffs(df_rets):
     return df_cu
 
 
-def variances(df_rets, lmbd=.94, ewma=True):
+def vars_covars(df_rets, lmbd=.94, ewma=True):
     df = copy.deepcopy(df_rets)
     symbols = df_rets.keys()
-    df = vars(symbols, df, lmbd, ewma=ewma)
-    df = cross_vars(symbols, df, lmbd, ewma=ewma)
+    df = ewma_vars(symbols, df, lmbd, ewma=ewma)
+    df = ewma_cross_vars(symbols, df, lmbd, ewma=ewma)
     df.drop(columns=symbols, inplace=True)
 
     df.drop(columns=[f'{s}_filt' for s in symbols], inplace=True)
@@ -246,7 +246,7 @@ def test_covaria():
 
     symbols = ['AAPL', 'MSFT', 'AMZN', 'KO']
     df_rets = symbols_returns(symbols, years=10)
-    covaria = variances(df_rets, ewma=False)
+    covaria = vars_covars(df_rets, ewma=False)
     plot_stacked(symbols, covaria, k='_ewma', title='covaria')
     plot_stacked(symbols, covaria, k='_MRKT', title='covaria_mrkt', skip=True)
 

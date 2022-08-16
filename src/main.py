@@ -11,7 +11,7 @@ from portfolios import (min_ewma_port,
                         get_matrix, 
                         get_cross_var_keys, 
                         get_ewma_keys,
-                        variances,
+                        vars_covars,
                         returns,
                         download)                   
 
@@ -151,73 +151,26 @@ def test01():
     plt.plot(df['equal_rela'].cumsum())
     plt.show()
 
-def min_distance(symbols, years=10):
-    df = download(symbols=symbols, years=14)
-    df_rets = returns(symbols, df)
-    df_c = cumsum(symbols=symbols, df=df_rets)
-    
-    from scipy.optimize import linprog
+from scipy import signal
 
-    symbols.remove('SPY')
-
-    for s in symbols:
-        df_c[f'{s}_d'] = df_c['SPY_csum'] - df_c[f'{s}_csum']
-
-    print(df_c[[f'{s}_d' for s in symbols]].head())
-
-    # plt.plot(df_c[[f'{s}_d' for s in symbols]])
-    # plt.show()
-
-    bounds = [(.02, 5*1/len(symbols))]*len(symbols)
-    A = [[1]*len(symbols)]
-    print(bounds)
-    print(A)
-    w_old = np.array([1/len(symbols)]*len(symbols))
-    data = []
-    counter = 0 
-    for index, row in df_c.iterrows():
-
-        r = row[[f'{s}_d' for s in symbols]]
-        rx = r.copy()
-        mean = np.dot(w_old, r)
-        rx = rx + np.abs(r.min())*2
-        rx_inv = (1 / rx ) ** 0.25
-        rx_inv_sum = rx_inv.sum()
-        w_inv = rx_inv / rx_inv_sum
-
-        new_d = np.dot(w_old,row[[f'{s}_csum' for s in symbols]])
-        data.append(new_d)
-        counter += 1
-        if not counter%250:
-            diference = df_c.SPY_csum.loc[index] - np.dot(w_inv,row[[f'{s}_csum' for s in symbols]])
-            print(f'update {counter} {diference} {100*np.abs(np.array(w_old) - np.array(w_inv)).sum()}')
-            w_old = w_inv
-        # print(rx.min(), rx.max(), rx.median(),  )
-        # r = np.reshape(np.array(r), (1,-1))
-        # pseudo inverse
-        # r = np.matmul(np.array(r).T, np.array(r))
-        # print(np.linalg.pinv(r))
-        # x = np.linalg.lstsq(r, b, rcond=None)
-        # print(x)
-
-        # b =np.reshape(np.array([0]), (1,-1))
-        # res = linprog(r, A_eq = A, b_eq=[1], bounds=bounds)
-        # print(res.x.sum(), res.x.T@r)
-    df_c['data'] = np.array(data)
-    plt.plot(df_c.data)
-    plt.plot(df_c.SPY_csum)
-    plt.show()
 if __name__ == '__main__':
     symbols = ['MSFT', 'AVGO', 'PG', 'BIL', 'SPY']
     symbols = ['BIL', 'HON', 'CL', 'AVGO', 'PG', 'PEP', 'XOM', 'KO', 'TXN', 'MO', 'XOM',
                'PM', 'KO', 'LMT', 'INTC', 'ADI', 'HD', 'JNJ', 'WFC', 'MCD', 'T', 'GS', 'WMT', 
                'SPY']
 
-    symbols = ['BIL', 'HON', 'CL', 'PG', 'PEP', 'XOM', 'KO', 'TXN', 'MO', 'XOM', 'SPY']
+    symbols = ['BIL', 'HON', 'CL']
 
+    df:pd.DataFrame = download(symbols, denoise=True)
 
-    min_distance(symbols)
+    df_rets = returns(symbols, df)
+    var_s =vars_covars(df_rets)
 
+    var_s['sum_ewma'] = var_s.mean(axis=1)
+    print(var_s.tail())
+    symbols.append('sum')
+    plot_stacked(symbols,var_s, k='_ewma')
+    plt.show()
     exit()
 
     df = download(symbols=symbols, years=10)
@@ -276,7 +229,7 @@ if __name__ == '__main__':
     lmbd = .94
     ewma = False
 
-    df_ewma = variances(df, lmbd, ewma=ewma)
+    df_ewma = vars_covars(df, lmbd, ewma=ewma)
 
     print(df_prices.tail())
     print(df_ewma.tail())
