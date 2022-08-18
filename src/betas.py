@@ -7,10 +7,17 @@ from calcs import (returns, beta_by_ewma, cross_matrix)
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import HuberRegressor
+from sklearn.linear_model import RANSACRegressor
+from sklearn.linear_model import TheilSenRegressor
+
+"""
+https://machinelearningmastery.com/robust-regression-for-machine-learning-in-python/
+https://www.statsmodels.org/dev/examples/notebooks/generated/robust_models_1.html
+"""
 
 
-
-def market_beta(X,Y,N=60):
+def market_beta(X,Y,N=60, regressor='Linear'):
     """ 
     see https://predictivehacks.com/stocks-market-beta-with-rolling-regression/
     X = The independent variable which is the Market
@@ -33,6 +40,13 @@ def market_beta(X,Y,N=60):
      
     for i in range((obs-N)):
         regressor = LinearRegression()
+        if regressor=='Huber':
+            regressor = HuberRegressor()
+        if regressor=='RANSAC':
+            regressor = RANSACRegressor()
+        if regressor=='TheilSen':
+            regressor=TheilSenRegressor()
+
         regressor.fit(X.to_numpy()[i : i + N+1].reshape(-1,1), Y.to_numpy()[i : i + N+1])
          
         betas[i+N]  = regressor.coef_[0]
@@ -136,6 +150,46 @@ def test_beta_covar():
 
     print(betas.tail())
 
+from sklearn.datasets import make_regression
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedKFold
+from numpy import absolute
+from numpy import mean
+from numpy import std
+from matplotlib import pyplot
+from numpy import arange
+
+# evaluate a model
+def evaluate_model(X, y, model):
+	# define model evaluation method
+	cv = RepeatedKFold(n_splits=10, n_repeats=3, random_state=1)
+	# evaluate model
+	scores = cross_val_score(model, X, y, scoring='neg_mean_absolute_error', cv=cv, n_jobs=-1)
+	# force scores to be positive
+	return absolute(scores)
+ 
+ # plot the dataset and the model's line of best fit
+def plot_best_fit(X, y, model):
+	# fut the model on all data
+	model.fit(X, y)
+	# plot the dataset
+	pyplot.scatter(X, y)
+	# plot the line of best fit
+	xaxis = arange(X.min(), X.max(), 0.01)
+	yaxis = model.predict(xaxis.reshape((len(xaxis), 1)))
+	pyplot.plot(xaxis, yaxis, color='r')
+	# show the plot
+	pyplot.title(type(model).__name__)
+	pyplot.show()
+
+
 
 if __name__ == "__main__":
     test_betas()
+    exit()
+
+    symbols = ['TSLA', 'SPY']
+
+    df = download(symbols)
+
+    df_rets = returns(symbols, df)
