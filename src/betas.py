@@ -183,9 +183,29 @@ def plot_best_fit(X, y, model):
 	pyplot.show()
 
 
+import datetime
 
 if __name__ == "__main__":
-    test_betas()
+    from pandas_datareader import famafrench
+
+
+    end = datetime.datetime(2022,6,30)
+    start = datetime.datetime(2012, 6, 30)
+    ds = famafrench.FamaFrenchReader('F-F_Research_Data_Factors_daily', start, end).read()
+    df_f_f = ds[0]
+    df_f_f[['Mkt-RF', 'SMB', 'HML', 'RF']] = df_f_f[['Mkt-RF', 'SMB', 'HML', 'RF']] / 100
+    print(ds[0].tail())
+    print(ds[0].keys())
+
+    df = download(['AAPL', 'PG'])
+    df_rets = returns(['AAPL', 'PG'], df)
+
+    import pandas as pd
+    print(df_rets.tail())
+    m = pd.merge(df_rets, df_f_f, on='Date')
+    print(m.tail())
+    plt.plot(m.cumsum())
+    plt.show()
     exit()
 
     symbols = ['TSLA', 'SPY']
