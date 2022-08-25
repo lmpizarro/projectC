@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from re import A
 import yfinance as yf
 import numpy as np
@@ -153,12 +154,7 @@ def test01():
 
 from scipy import signal
 
-if __name__ == '__main__':
-    symbols = ['MSFT', 'AVGO', 'PG', 'BIL', 'SPY']
-    symbols = ['BIL', 'HON', 'CL', 'AVGO', 'PG', 'PEP', 'XOM', 'KO', 'TXN', 'MO', 'XOM',
-               'PM', 'KO', 'LMT', 'INTC', 'ADI', 'HD', 'JNJ', 'WFC', 'MCD', 'T', 'GS', 'WMT', 
-               'SPY']
-
+def test_denoise():
     symbols = ['BIL', 'HON', 'CL']
 
     df:pd.DataFrame = download(symbols, denoise=True)
@@ -170,6 +166,56 @@ if __name__ == '__main__':
     print(var_s.tail())
     symbols.append('sum')
     plot_stacked(symbols,var_s, k='_ewma')
+    plt.show()
+
+if __name__ == '__main__':
+    symbols = ['MSFT', 'AVGO', 'PG', 'BIL', 'SPY']
+    symbols = ['BIL', 'HON', 'CL', 'AVGO', 'PG', 'PEP', 'XOM', 'KO', 'TXN', 'MO', 'XOM',
+               'PM', 'KO', 'LMT', 'INTC', 'ADI', 'HD', 'JNJ', 'WFC', 'MCD', 'T', 'GS', 'WMT', 
+               'SPY']
+
+    """
+        AAPL220826C00070000 
+        symbol = AAPL
+        year = 2022
+        date = 26
+        month = 08
+        C = call
+        00070000 = 70   9999.9999
+    """
+    aapl = yf.Ticker('TSLA')
+    options_dates = aapl.options
+    
+    strikes = pd.DataFrame()
+    for d in options_dates:
+        ex_date = datetime.strptime(d, "%Y-%m-%d").date()
+        today = datetime.now().date()
+        time_to_expire = ex_date - today
+ 
+        calls: pd.DataFrame = aapl.option_chain(d).calls
+        vol_strike = calls[['strike', 'impliedVolatility']]
+        vol_strike = vol_strike.set_index('strike')
+        vol_strike.rename(columns={'impliedVolatility':time_to_expire.days}, inplace=True)
+        print(vol_strike)
+        if strikes.empty:
+            strikes = vol_strike
+        else:
+            strikes = pd.merge(strikes, vol_strike, on='strike')
+        
+    strikes.fillna(0, inplace=True)
+    print(calls.keys())
+    print(strikes.tail())
+    plt.plot(strikes.index, strikes[strikes.keys()])
+    plt.show()
+    from matplotlib import cm
+    x = np.array(strikes.columns, dtype="float64")
+    y = strikes.index
+    X,Y = np.meshgrid(x,y)
+    Z = np.array(strikes, dtype="float64")
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.plot_surface(X, Y, Z, cmap=cm.coolwarm,
+                       linewidth=0, antialiased=False)
     plt.show()
     exit()
 
