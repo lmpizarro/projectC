@@ -214,8 +214,11 @@ if __name__ == '__main__':
     Z = np.array(strikes, dtype="float64")
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    ax.plot_surface(X, Y, Z, cmap=cm.coolwarm,
-                       linewidth=0, antialiased=False)
+    ax.plot_surface(X, Y, Z, cmap=cm.hot, linewidth=0, antialiased=True)
+    # ax.plot_wireframe(X, Y, Z, rstride=40, cstride=40)
+    """
+    https://jakevdp.github.io/PythonDataScienceHandbook/04.12-three-dimensional-plotting.html
+    """
     plt.show()
     exit()
 
