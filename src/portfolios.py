@@ -211,11 +211,11 @@ def mrkt_diffs(df_rets):
     return df_cu
 
 
-def vars_covars(df_rets, lmbd=.94, ewma=True):
+def vars_covars(df_rets, lmbd=.94, mode='ewma'):
     df = copy.deepcopy(df_rets)
     symbols = df_rets.keys()
-    df = ewma_vars(symbols, df, lmbd, ewma=ewma)
-    df = ewma_cross_vars(symbols, df, lmbd, ewma=ewma)
+    df = ewma_vars(symbols, df, lmbd, mode='ewma')
+    df = ewma_cross_vars(symbols, df, lmbd, mode='ewma')
     df.drop(columns=symbols, inplace=True)
 
     df.drop(columns=[f'{s}_filt' for s in symbols], inplace=True)
@@ -246,7 +246,7 @@ def test_covaria():
 
     symbols = ['AAPL', 'MSFT', 'AMZN', 'KO']
     df_rets = symbols_returns(symbols, years=10)
-    covaria = vars_covars(df_rets, ewma=False)
+    covaria = vars_covars(df_rets, mode='teor')
     plot_stacked(symbols, covaria, k='_ewma', title='covaria')
     plot_stacked(symbols, covaria, k='_MRKT', title='covaria_mrkt', skip=True)
 
@@ -304,7 +304,7 @@ def tracker01(symbols):
 from scipy import signal
 
 def tracker02(symbols):
-    df = download(symbols=symbols, years=14, denoise=False)
+    df = download(symbols=symbols, years=10, denoise=False)
     print(df.tail())
     df_rets = returns(symbols, df)
     df_c = cumsum(symbols=symbols, df=df_rets)
@@ -355,7 +355,8 @@ def tracker02(symbols):
         data.append(new_d)
 
         counter += 1
-        if not counter%60:
+        if not counter%20:
+            print('weights ', w_old)
 
             ref_time_serie = df_c.SPY_csum.loc[index]
            
@@ -367,6 +368,9 @@ def tracker02(symbols):
     df_c['data'] = np.array(data)
     plt.plot(df_c.data)
     plt.plot(df_c.SPY_csum)
+    plt.show()
+
+    plt.plot(100 * (df_c.data - df_c.SPY_csum))
     plt.show()
 
 
