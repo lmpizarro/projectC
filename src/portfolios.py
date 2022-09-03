@@ -41,7 +41,7 @@ def get_cumsum_keys(symbols):
         keys.append(key_var)
     return keys
 
- 
+
 def get_matrix(symbols, row_item):
     a = np.zeros(len(symbols)*len(symbols))
     a = a.reshape(len(symbols), len(symbols))
@@ -50,7 +50,7 @@ def get_matrix(symbols, row_item):
         a[i,i] = row_item[key]
         for j in range(i+1, len(symbols)):
             key = f'{symbols[i]}_{symbols[j]}'
-            a[i,j] = row_item[key] 
+            a[i,j] = row_item[key]
             a[j,i] = row_item[key]
     return a
 
@@ -66,7 +66,7 @@ def equal_weight_port(symbols, years=10, name='equal'):
 
     w = np.array([1/len(symbols)] * len(symbols))
     for index, row in df.iterrows():
-        
+
         return_ = np.matmul(w, df_rets.loc[index])
         a = get_matrix(symbols, row_item=row)
         risk = np.matmul(w, np.matmul(a, w))
@@ -96,11 +96,11 @@ def min_ewma_port(symbols:List[str], years=10, name: str='inv'):
             whts = [(1/row[e+'_ewma'])/s_var for e in symbols if s_var != 0 and row[e+'_ewma'] != 0]
         if len(whts) == len(symbols):
             w = np.array(whts)
-        
+
             diff_ = np.abs(w - w_old).sum()
             if diff_ > 0.05:
                 w_old = w
-                N = N + 1  
+                N = N + 1
 
     df_rets[f'{name}_port'] = np.array(data)
 
@@ -131,7 +131,7 @@ def download(symbols, years=10, denoise=False, YTD=True, end=None):
 
         re = {f'{s}_deno':s for s in symbols}
         df.rename(columns=re, inplace=True)
-    
+
     print(df.tail())
 
     return df
@@ -140,7 +140,7 @@ def custom_port(ct_port: List[Tuple[str, float]],
                 years=10,
                 name='cust'):
     """
-        ct_port [(symbol0, pct0),(...)...] 
+        ct_port [(symbol0, pct0),(...)...]
     """
 
     c_port = sorted(ct_port, key=lambda tup: tup[0])
@@ -150,7 +150,7 @@ def custom_port(ct_port: List[Tuple[str, float]],
     df = download(symbols, years=years)
 
     df_rets = returns(symbols, df)
-    
+
     df_c = weights * df_rets
     df_c[f'{name}'] = df_c.sum(axis=1)
     df_c[f'{name}_csum'] = df_c[f'{name}'].cumsum()
@@ -246,7 +246,7 @@ def test_covaria():
 
     symbols = ['AAPL', 'MSFT', 'AMZN', 'KO']
     df_rets = symbols_returns(symbols, years=10)
-    covaria = vars_covars(df_rets, mode='teor')
+    covaria = vars_covars(df_rets, mode='garch')
     plot_stacked(symbols, covaria, k='_ewma', title='covaria')
     plot_stacked(symbols, covaria, k='_MRKT', title='covaria_mrkt', skip=True)
 
@@ -278,7 +278,7 @@ def tracker01(symbols):
 
     w_old = np.array([1/len(symbols)]*len(symbols))
     data = []
-    counter = 0 
+    counter = 0
     for index, row in df_c.iterrows():
 
         r = row[[f'{s}_d' for s in symbols]]
@@ -295,7 +295,7 @@ def tracker01(symbols):
             diference = df_c.SPY_csum.loc[index] - np.dot(w_inv,row[[f'{s}_csum' for s in symbols]])
             print(f'update {counter} {diference} {100*np.abs(np.array(w_old) - np.array(w_inv)).sum()}')
             w_old = w_inv
-    
+
     df_c['data'] = np.array(data)
     plt.plot(df_c.data)
     plt.plot(df_c.SPY_csum)
@@ -317,22 +317,22 @@ def tracker02(symbols):
         col_time_series = row[[f'{s}_csum' for s in symbols]]
         rx = row[[f'{s}_d' for s in symbols]]
         sigma = rx.max() - rx.min()
-        winvs = [weights(rx, m, s) 
+        winvs = [weights(rx, m, s)
                  for m in np.linspace(2*rx.min(), 2*rx.max(), Np)
-                 for s in np.linspace(sigma/2, sigma*2, Np)]                                    
- 
-        dict_minimizer = {np.abs(int(1e6*float(error(ref_time_serie, 
-                                                     col_time_series, 
+                 for s in np.linspace(sigma/2, sigma*2, Np)]
+
+        dict_minimizer = {np.abs(int(1e6*float(error(ref_time_serie,
+                                                     col_time_series,
                                                      w_inv)))): w_inv
                                                      for w_inv in
                                                      winvs
                                                     }
 
         w_inv = dict_minimizer[min(dict_minimizer)]
-        difference = error(ref_time_serie, 
-                           col_time_series, 
+        difference = error(ref_time_serie,
+                           col_time_series,
                            w_inv)
- 
+
         return w_inv, difference
 
     def error(spy_row, row, w_inv):
@@ -347,7 +347,7 @@ def tracker02(symbols):
 
     w_old = np.array([1/len(symbols)]*len(symbols))
     data = []
-    counter = 0 
+    counter = 0
     for index, row in df_c.iterrows():
 
 
@@ -359,12 +359,12 @@ def tracker02(symbols):
             print('weights ', w_old)
 
             ref_time_serie = df_c.SPY_csum.loc[index]
-           
+
             w_inv, difference = minimizer(ref_time_serie, row, Np=20)
 
             print(f'update {difference} {100*np.abs(np.array(w_old) - np.array(w_inv)).sum()}')
             w_old = w_inv
-    
+
     df_c['data'] = np.array(data)
     plt.plot(df_c.data)
     plt.plot(df_c.SPY_csum)
@@ -379,7 +379,7 @@ def min_distances():
     import pandas as pd
     from scraper.scrapers import scrap_cedear_rava, list_sp500
     ce = scrap_cedear_rava()
-    
+
     sp500 = pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')[0]
 
     oldests_sp500 = list(sp500[sp500.Founded < '2002'].Symbol)
@@ -391,7 +391,7 @@ def min_distances():
     symbols.append('SPY')
 
     print(len(symbols))
-    
+
 
     df = download(symbols=symbols, years=20)
     df_rets = returns(symbols, df, log__=True)
@@ -420,7 +420,8 @@ def test_tracker():
 
 
 if __name__ == '__main__':
-    test_tracker()    
+    # test_tracker()
+    test_covaria()
     exit()
     symbols = ['AAPL', 'MSFT', 'AMZN', 'TSLA', 'BRK-B', 'KO', 'NVDA', 'JNJ', 'META', 'PG', 'MELI', 'PEP', 'AVGO']
     symbols = ['AAPL', 'MSFT', 'AMZN', 'KO']
@@ -430,10 +431,10 @@ if __name__ == '__main__':
     cum_ret = cum_returns(df_rets)
 
     print(cum_ret.tail(10))
-    
+
     plot_stacked(symbols, df_rets, k='', title='returns')
     plot_stacked(symbols, cum_ret, k='_csum', title='c_returns')
     sns.pairplot(df_rets)
     plt.show()
 
-    
+

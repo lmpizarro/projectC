@@ -1,4 +1,5 @@
 import numpy as np
+from arch import arch_model
 
 def returns(symbols, df, log__=False):
 
@@ -31,6 +32,10 @@ def ewma_vars(symbols, df, lmbd=.99, mode='ewma'):
         df[key_ewma] = (df[s]**2).ewm(alpha=1-lmbd).mean()
         if mode == 'teor':
             df[key_ewma] -= df[key_filt]**2
+        elif mode == 'garch':
+            am = arch_model(100*df[s]**2, p=1, o=1, q=1, power=1.0, dist="StudentsT")
+            res = am.fit(update_freq=5)
+            df[key_ewma] = res.conditional_volatility / 100
 
 
     df.fillna(0, inplace=True)
@@ -50,6 +55,12 @@ def ewma_cross_vars(symbols, df, lmbd=.99, mode='ewma', deno=False):
             df[key] = df[key].ewm(alpha=1-lmbd).mean()
             if mode == 'teor':
                 df[key] -= (df[key]).ewm(alpha=1-lmbd).mean()
+            elif mode == 'garch':
+                am = arch_model(100*df[s1]*df[s2], p=1, o=1, q=1, power=1.0, dist="StudentsT")
+                res = am.fit(update_freq=5)
+                df[key] = res.conditional_volatility / 100
+
+
     df.fillna(0, inplace=True)
     return df
 

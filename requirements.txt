@@ -1,2 +1,3 @@
 PyWavelets==1.3.0
 beautifulsoup4==4.11.1
+arch=5.3.1
