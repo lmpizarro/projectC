@@ -78,7 +78,7 @@ def equal_weight_port(symbols, years=10, name='equal'):
 
     return df, w
 
-def min_ewma_port(symbols:List[str], years=10, name: str='inv'):
+def min_ewma_port(symbols:List[str], years=10, name: str='inv', period=60):
     df = download(symbols=symbols, years=years)
     df_rets = cross_matrix(symbols=symbols, df=df, mode='garch')
     # df_rets = df[get_filt_keys(symbols)]
@@ -98,7 +98,8 @@ def min_ewma_port(symbols:List[str], years=10, name: str='inv'):
             w = np.array(whts)
 
             diff_ = np.abs(w - w_old).sum()
-            if diff_ > 0.05:
+            # if diff_ > 0.05:
+            if not N%period:
                 w_old = w
                 N = N + 1
 
