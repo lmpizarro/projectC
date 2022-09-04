@@ -134,17 +134,30 @@ def control_var_key(symbol, df):
 symbols = ['KO', 'PEP', 'PG', 'AAPL', 'JNJ', 'AMZN', 'DE', 'CAT', 'META', 'MSFT', 'ADI']
 symbols = ['MSFT', 'AVGO', 'PG', 'PEP', 'AAPL', 'KO', 'LMT', 'TSLA', 'ADI', 'MELI', 'JNJ', 'SPY', 'AMZN', 'META']
 
-
 def test_equal_weight():
 
     symbols = ['PG', 'PEP', 'AAPL']
     np.random.seed(1)
     symbols.sort()
 
-    df_min = min_ewma_port(symbols)
-
     df_equal = equal_weight_port(symbols)
-    print(df_equal.keys())
+
+
+    plt.plot(df_equal['risk'], 'k')
+    plt.show()
+
+    plt.plot(df_equal['returns'].cumsum())
+    plt.show()
+
+
+def test_equal_min_weight():
+
+    symbols = ['PG', 'PEP', 'AAPL']
+    np.random.seed(1)
+    symbols.sort()
+
+    df_min = min_ewma_port(symbols)
+    df_equal = equal_weight_port(symbols)
 
     diff__ = df_equal['risk']- df_min['risk']
     print(diff__.mean())
@@ -156,24 +169,9 @@ def test_equal_weight():
     plt.show()
 
     plt.plot(df_equal['returns'].cumsum())
-    plt.show()
     plt.plot(df_min['returns'].cumsum(), 'g')
     plt.show()
 
-
-def test_denoise():
-    symbols = ['BIL', 'HON', 'CL']
-
-    df:pd.DataFrame = download(symbols, denoise=True)
-
-    df_rets = returns(symbols, df)
-    var_s = vars_covars(df_rets)
-
-    var_s['sum_ewma'] = var_s.mean(axis=1)
-    print(var_s.tail())
-    symbols.append('sum')
-    plot_stacked(symbols,var_s, k='_ewma')
-    plt.show()
 
 def test_options():
     """
@@ -242,7 +240,7 @@ def test_options():
     plt.show()
 
 if __name__ == '__main__':
-    test_equal_weight()
+    test_equal_min_weight()
     exit()
     symbols = ['MSFT', 'AVGO', 'PG', 'BIL', 'SPY']
     symbols = ['BIL', 'HON', 'CL', 'AVGO', 'PG', 'PEP', 'XOM', 'KO', 'TXN', 'MO', 'XOM',

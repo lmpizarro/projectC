@@ -127,8 +127,6 @@ from sklearn.datasets import make_regression
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import RepeatedKFold
 from numpy import absolute
-from numpy import mean
-from numpy import std
 from matplotlib import pyplot
 from numpy import arange
 
