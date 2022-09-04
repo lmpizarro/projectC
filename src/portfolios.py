@@ -81,31 +81,32 @@ def equal_weight_port(symbols, years=10, name='equal'):
 def min_ewma_port(symbols:List[str], years=10, name: str='inv', period=60):
     df = download(symbols=symbols, years=years)
     df_rets = cross_matrix(symbols=symbols, df=df, mode='garch')
-    # df_rets = df[get_filt_keys(symbols)]
-
-    data = []
-    w_old = np.zeros(len(symbols))
     N = 0
-    w = w_old
+    data = []
+    weights = []
+    new_weight = np.array([1/len(symbols)]*len(symbols))
+    weights.append(new_weight)
     for index, row in df_rets.iterrows():
         a = get_matrix(symbols, row_item=row)
-        data.append(np.matmul(w, np.matmul(a, w)))
+        data.append(np.matmul(new_weight, np.matmul(a, new_weight)))
+        N +=1
+        if not N%period:
+            s_var = (1/row[[e+'_ewma' for e in symbols]]).sum()
+            if s_var != 0:
+                whts = [(1/row[e+'_ewma'])/s_var for e in symbols if s_var != 0 and row[e+'_ewma'] != 0]
+            if len(whts) == len(symbols):
+                new_weight = np.array(whts)
+                weights.append(new_weight)
+                # diff_ = np.abs(w - w_old).sum()
+                # if diff_ > 0.05:
 
-        s_var = (1/row[[e+'_ewma' for e in symbols]]).sum()
-        if s_var != 0:
-            whts = [(1/row[e+'_ewma'])/s_var for e in symbols if s_var != 0 and row[e+'_ewma'] != 0]
-        if len(whts) == len(symbols):
-            w = np.array(whts)
 
-            diff_ = np.abs(w - w_old).sum()
-            # if diff_ > 0.05:
-            if not N%period:
-                w_old = w
-                N = N + 1
+    if len(data) == len(df_rets):
+        df_rets[f'{name}_port'] = np.array(data)
+    else:
+        raise ValueError('error len data')
 
-    df_rets[f'{name}_port'] = np.array(data)
-
-    return df_rets, w
+    return df_rets, weights
 
 
 import yfinance as yf
