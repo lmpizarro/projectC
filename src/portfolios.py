@@ -2,7 +2,9 @@ from typing import List, Tuple
 import numpy as np
 from calcs import (cumsum, returns, ewma_vars, ewma_cross_vars, cross_matrix)
 from denoisers.butter.filter import min_lp
-from plot.ploter import plot_stacked
+import matplotlib.pyplot as plt
+import copy
+from betas import market_beta
 
 def get_cross_var_keys(symbols):
     keys = []
@@ -60,7 +62,7 @@ def equal_weight_port(symbols, years=10):
 
     df = download(symbols=symbols, years=years)
     df = cross_matrix(symbols=symbols, df=df, mode='garch')
-    df_rets = df[get_filt_keys(symbols)]
+    df_rets = df[symbols]
 
     w = np.array([1/len(symbols)] * len(symbols))
     for index, row in df.iterrows():
@@ -182,7 +184,6 @@ def symbols_returns(symbols, years=10):
 
     return df_rets
 
-import copy
 def cum_returns(df_rets):
     df = copy.deepcopy(df_rets)
     symbols = df_rets.keys()
@@ -209,59 +210,15 @@ def mrkt_diffs(df_rets):
 
     return df_cu
 
-
-def vars_covars(df_rets, lmbd=.94, mode='ewma'):
+def vars_covars(df_rets, lmbd=.94, mode='garch'):
     df = copy.deepcopy(df_rets)
     symbols = df_rets.keys()
-    df = ewma_vars(symbols, df, lmbd, mode='ewma')
-    df = ewma_cross_vars(symbols, df, lmbd, mode='ewma')
+    df = ewma_vars(symbols, df, lmbd, mode=mode)
+    df = ewma_cross_vars(symbols, df, lmbd, mode=mode)
     df.drop(columns=symbols, inplace=True)
 
     df.drop(columns=[f'{s}_filt' for s in symbols], inplace=True)
     return df
-
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-
-def test_download():
-    symbols = ['MSFT', 'KO']
-
-    dfs = download(symbols=symbols, years=10)
-
-    print(dfs.tail())
-
-def test_mrkt_returns():
-    df, c_port = mrkt_returns()
-    print(df.tail())
-
-    plt.plot(df['MRKT'])
-    plt.show()
-
-    plt.plot(df['MRKT_csum'])
-    plt.show()
-
-def test_covaria():
-
-    symbols = ['AAPL', 'MSFT', 'AMZN', 'KO']
-    df_rets = symbols_returns(symbols, years=10)
-    covaria = vars_covars(df_rets, mode='garch')
-    plot_stacked(symbols, covaria, k='_ewma', title='covaria')
-    plot_stacked(symbols, covaria, k='_MRKT', title='covaria_mrkt', skip=True)
-
-    from numpy import linalg as LA
-    symbols.remove('MRKT')
-    for index, row in covaria.iterrows():
-
-        a = get_cross_matrix(symbols, row_item=row)
-
-        try:
-            # print(LA.cond(a), bb)
-            bb = min(LA.svd(a, compute_uv=False))*min(LA.svd(LA.inv(a), compute_uv=False))
-        except Exception as err:
-            print(index, err, a)
-
-    print(covaria.head())
 
 def tracker01(symbols):
     df = download(symbols=symbols, years=14)
@@ -302,9 +259,9 @@ def tracker01(symbols):
 
 from scipy import signal
 
+
 def tracker02(symbols):
     df = download(symbols=symbols, years=10, denoise=False)
-    print(df.tail())
     df_rets = returns(symbols, df)
     df_c = cumsum(symbols=symbols, df=df_rets)
 
@@ -345,32 +302,30 @@ def tracker02(symbols):
     print(df_c[[f'{s}_d' for s in symbols]].head())
 
     w_old = np.array([1/len(symbols)]*len(symbols))
-    data = []
+    csum_data = np.empty( shape=(0, 0) )
     counter = 0
+    rebalance_weights = []
+    residuals = []
     for index, row in df_c.iterrows():
 
-
         new_d = np.dot(w_old,row[[f'{s}_csum' for s in symbols]])
-        data.append(new_d)
+        csum_data = np.append(csum_data, new_d)
 
         counter += 1
         if not counter%20:
-            print('weights ', w_old)
-
             ref_time_serie = df_c.SPY_csum.loc[index]
 
-            w_inv, difference = minimizer(ref_time_serie, row, Np=20)
-
-            print(f'update {difference} {100*np.abs(np.array(w_old) - np.array(w_inv)).sum()}')
+            w_inv, residual = minimizer(ref_time_serie, row, Np=20)
+            weights_change = 100*np.abs(np.array(w_old) - np.array(w_inv)).sum()
+            rebalance_weights.append(weights_change)
+            residuals.append(residual)
             w_old = w_inv
 
-    df_c['data'] = np.array(data)
-    plt.plot(df_c.data)
-    plt.plot(df_c.SPY_csum)
-    plt.show()
+    print(f'residuo {np.array(residuals).mean()} '
+          f'rebalanceo {np.array(rebalance_weights).mean()}')
 
-    plt.plot(100 * (df_c.data - df_c.SPY_csum))
-    plt.show()
+    df_c['tracker_csum'] = csum_data
+    return df_c
 
 
 def min_distances():
@@ -408,32 +363,34 @@ def min_distances():
 
 def test_tracker():
 
-    symbols = ['BIL', 'HON', 'MSFT', 'PEP', 'XOM', 'KO', 'TXN', 'MO', 'XOM', 'SPY']
-    # symbols = ['BIL', 'HON', 'CL', 'XOM', 'SPY']
-    symbols_min = min_distances()
-    symbols = symbols_min[:10]
+    # symbols_min = min_distances()
+    # symbols = symbols_min[:10]
+    symbols = ['V', 'CSCO', 'MSFT', 'PEP', 'KO', 'MMM', 'HD', 'ORCL', 'MCD', 'MDT']
     # symbols.extend(symbols_min[-5:])
     symbols.append('BIL')
     symbols.append('SPY')
-    tracker02(symbols)
+    df_c = tracker02(symbols)
+    error = df_c.tracker_csum - df_c.SPY_csum
+
+    plt.plot(df_c.tracker_csum)
+    plt.plot(df_c.SPY_csum)
+    plt.show()
+
+    plt.plot(error)
+    plt.show()
+
+    plt.plot(np.abs(error))
+    plt.show()
+
+
+    alpha, df_c['beta'] = market_beta(df_c.SPY_csum, df_c.tracker_csum)
+
+    plt.plot(df_c['beta'])
+    plt.show()
+
+    print(f'ERRORS {error.mean()} {np.abs(error).mean()}')
+    print(f'beta {df_c["beta"].mean()}')
 
 
 if __name__ == '__main__':
     test_tracker()
-    # test_covaria()
-    exit()
-    symbols = ['AAPL', 'MSFT', 'AMZN', 'TSLA', 'BRK-B', 'KO', 'NVDA', 'JNJ', 'META', 'PG', 'MELI', 'PEP', 'AVGO']
-    symbols = ['AAPL', 'MSFT', 'AMZN', 'KO']
-
-
-    df_rets = symbols_returns(symbols, years=10)
-    cum_ret = cum_returns(df_rets)
-
-    print(cum_ret.tail(10))
-
-    plot_stacked(symbols, df_rets, k='', title='returns')
-    plot_stacked(symbols, cum_ret, k='_csum', title='c_returns')
-    sns.pairplot(df_rets)
-    plt.show()
-
-

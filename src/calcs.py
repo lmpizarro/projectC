@@ -76,15 +76,6 @@ def ewma_cross_vars(symbols, df, lmbd=.99, mode='ewma', deno=False):
 
 import pandas as pd
 
-def beta_by_ewma(symbols, df_cov):
-    beta = pd.DataFrame()
-    symbols.remove('MRKT')
-    for s in symbols:
-        k_cov_mrkt = f'{s}_MRKT'
-        beta[s] = df_cov[k_cov_mrkt] / df_cov['MRKT_ewma']
-
-    return beta
-
 def cross_matrix(symbols, df, lmbd=0.94, mode='ewma', deno=False):
     df_rets = returns(symbols, df, deno)
     df_rets = ewma_vars(symbols, df_rets, lmbd, mode=mode)

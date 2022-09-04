@@ -6,7 +6,12 @@ from portfolios import (cum_returns, download,
                         mrkt_returns,
                         vars_covars,
                         symbols_returns,
-                        get_cross_matrix)
+                        get_cross_matrix,
+                        cross_matrix)
+
+from betas import (rolling_beta_fussion, beta_by_ewma)
+
+from calcs import returns
 from plot.ploter import plot_stacked
 import seaborn as sns
 
@@ -66,7 +71,77 @@ def test_cum_returns():
     plt.show()
 
 
+def test_denoise():
+    symbols = ['BIL', 'HON', 'CL']
 
+    df:pd.DataFrame = download(symbols, denoise=True)
+
+    df_rets = returns(symbols, df)
+    var_s = vars_covars(df_rets)
+
+    var_s['sum_ewma'] = var_s.mean(axis=1)
+    print(var_s.tail())
+    symbols.append('sum')
+    plot_stacked(symbols,var_s, k='_ewma')
+    plt.show()
+
+def test_fama_french():
+    import datetime
+    from pandas_datareader import famafrench
+
+
+    end = datetime.datetime(2022,6,30)
+    start = datetime.datetime(2012, 6, 30)
+    ds = famafrench.FamaFrenchReader('F-F_Research_Data_Factors_daily', start, end).read()
+    df_f_f = ds[0]
+    df_f_f[['Mkt-RF', 'SMB', 'HML', 'RF']] = df_f_f[['Mkt-RF', 'SMB', 'HML', 'RF']] / 100
+    print(ds[0].tail())
+    print(ds[0].keys())
+
+    df = download(['AAPL', 'PG'])
+    df_rets = returns(['AAPL', 'PG'], df)
+
+    import pandas as pd
+    print(df_rets.tail())
+    m = pd.merge(df_rets, df_f_f, on='Date')
+    print(m.tail())
+    plt.plot(m.cumsum())
+    plt.show()
+
+def test_betas():
+    symbols = ['TSLA', 'KO', 'AAPL', 'SPY', 'AVGO']
+
+    df = download(symbols)
+    df1 = df.copy()
+    # df['SPY'] = np.random.normal(.01, .1, size=len(df)) + np.random.normal(.01, .001, size=len(df))
+    # df['BIL'] = 5 * df['SPY']
+    # df['KO'] = .5 * df['SPY']
+
+    df.rename(columns={'SPY':'MRKT'}, inplace=True)
+    symbols.remove('SPY')
+    symbols.append('MRKT')
+
+    df_betas = rolling_beta_fussion(df, N=120)
+
+    symbols.remove('MRKT')
+    plt.plot(df_betas[symbols])
+    plt.show()
+
+def test_beta_covar():
+    symbols = ['TSLA', 'KO', 'AAPL', 'SPY', 'AVGO']
+
+
+    df = download(symbols)
+    df.rename(columns={'SPY':'MRKT'}, inplace=True)
+
+    symbols.remove('SPY')
+
+    symbols.append('MRKT')
+
+    df = cross_matrix(symbols, df)
+    betas = beta_by_ewma(symbols, df)
+
+    print(betas.tail())
 
 if __name__ == '__main__':
-    test_cum_returns()
+    test_denoise()

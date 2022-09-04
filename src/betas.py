@@ -2,8 +2,7 @@
 # -*- coding: utf-8 -*-
 from statsmodels.regression.rolling import RollingOLS
 import statsmodels.api as sm
-from portfolios import download
-from calcs import (returns, beta_by_ewma, cross_matrix)
+from calcs import (returns, cross_matrix)
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.linear_model import LinearRegression
@@ -16,28 +15,36 @@ https://machinelearningmastery.com/robust-regression-for-machine-learning-in-pyt
 https://www.statsmodels.org/dev/examples/notebooks/generated/robust_models_1.html
 """
 
+def beta_by_ewma(symbols, df_cov):
+    beta = pd.DataFrame()
+    symbols.remove('MRKT')
+    for s in symbols:
+        k_cov_mrkt = f'{s}_MRKT'
+        beta[s] = df_cov[k_cov_mrkt] / df_cov['MRKT_ewma']
+
+    return beta
 
 def market_beta(X,Y,N=60, regressor='Linear'):
-    """ 
+    """
     see https://predictivehacks.com/stocks-market-beta-with-rolling-regression/
     X = The independent variable which is the Market
     Y = The dependent variable which is the Stock
     N = The length of the Window
-     
+
     It returns the alphas and the betas of
     the rolling regression
     """
-     
+
     # all the observations
     obs = len(X)
-     
+
     # initiate the betas with null values
     betas = np.full(obs, np.nan)
-     
+
     # initiate the alphas with null values
     alphas = np.full(obs, np.nan)
-     
-     
+
+
     for i in range((obs-N)):
         regressor = LinearRegression()
         if regressor=='Huber':
@@ -48,10 +55,10 @@ def market_beta(X,Y,N=60, regressor='Linear'):
             regressor=TheilSenRegressor()
 
         regressor.fit(X.to_numpy()[i : i + N+1].reshape(-1,1), Y.to_numpy()[i : i + N+1])
-         
+
         betas[i+N]  = regressor.coef_[0]
         alphas[i+N]  = regressor.intercept_
- 
+
     return(alphas, betas)
 
 
@@ -81,7 +88,7 @@ def rolling_beta_sk(df_rets, N=60):
         alpha, beta = market_beta(df_rets['MRKT'], df_rets[s], N=N)
 
         df_rets[s] = beta
-    
+
     return df_rets
 
 def rolling_beta_fussion(df, N=60):
@@ -115,40 +122,6 @@ def rolling_beta_fussion(df, N=60):
     return df_1
 
 
-def test_betas():
-    symbols = ['TSLA', 'KO', 'AAPL', 'SPY', 'AVGO']
-
-    df = download(symbols)
-    df1 = df.copy()
-    # df['SPY'] = np.random.normal(.01, .1, size=len(df)) + np.random.normal(.01, .001, size=len(df))
-    # df['BIL'] = 5 * df['SPY'] 
-    # df['KO'] = .5 * df['SPY'] 
-
-    df.rename(columns={'SPY':'MRKT'}, inplace=True)
-    symbols.remove('SPY')
-    symbols.append('MRKT')
-
-    df_betas = rolling_beta_fussion(df, N=120)
-
-    symbols.remove('MRKT')    
-    plt.plot(df_betas[symbols])
-    plt.show()
-
-def test_beta_covar():
-    symbols = ['TSLA', 'KO', 'AAPL', 'SPY', 'AVGO']
-
-    
-    df = download(symbols)
-    df.rename(columns={'SPY':'MRKT'}, inplace=True)
-    
-    symbols.remove('SPY')
-
-    symbols.append('MRKT')
-
-    df = cross_matrix(symbols, df)
-    betas = beta_by_ewma(symbols, df)
-
-    print(betas.tail())
 
 from sklearn.datasets import make_regression
 from sklearn.model_selection import cross_val_score
@@ -167,7 +140,7 @@ def evaluate_model(X, y, model):
 	scores = cross_val_score(model, X, y, scoring='neg_mean_absolute_error', cv=cv, n_jobs=-1)
 	# force scores to be positive
 	return absolute(scores)
- 
+
  # plot the dataset and the model's line of best fit
 def plot_best_fit(X, y, model):
 	# fut the model on all data
@@ -183,33 +156,4 @@ def plot_best_fit(X, y, model):
 	pyplot.show()
 
 
-import datetime
 
-if __name__ == "__main__":
-    from pandas_datareader import famafrench
-
-
-    end = datetime.datetime(2022,6,30)
-    start = datetime.datetime(2012, 6, 30)
-    ds = famafrench.FamaFrenchReader('F-F_Research_Data_Factors_daily', start, end).read()
-    df_f_f = ds[0]
-    df_f_f[['Mkt-RF', 'SMB', 'HML', 'RF']] = df_f_f[['Mkt-RF', 'SMB', 'HML', 'RF']] / 100
-    print(ds[0].tail())
-    print(ds[0].keys())
-
-    df = download(['AAPL', 'PG'])
-    df_rets = returns(['AAPL', 'PG'], df)
-
-    import pandas as pd
-    print(df_rets.tail())
-    m = pd.merge(df_rets, df_f_f, on='Date')
-    print(m.tail())
-    plt.plot(m.cumsum())
-    plt.show()
-    exit()
-
-    symbols = ['TSLA', 'SPY']
-
-    df = download(symbols)
-
-    df_rets = returns(symbols, df)
