@@ -60,7 +60,7 @@ def equal_weight_port(symbols, years=10, name='equal'):
     data_rel = []
 
     df = download(symbols=symbols, years=years)
-    df = cross_matrix(symbols=symbols, df=df)
+    df = cross_matrix(symbols=symbols, df=df, mode='garch')
     df_rets = df[get_filt_keys(symbols)]
 
 
@@ -80,7 +80,7 @@ def equal_weight_port(symbols, years=10, name='equal'):
 
 def min_ewma_port(symbols:List[str], years=10, name: str='inv'):
     df = download(symbols=symbols, years=years)
-    df_rets = cross_matrix(symbols=symbols, df=df)
+    df_rets = cross_matrix(symbols=symbols, df=df, mode='garch')
     # df_rets = df[get_filt_keys(symbols)]
 
     data = []

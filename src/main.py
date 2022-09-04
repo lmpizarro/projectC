@@ -6,15 +6,16 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import copy
 from calcs import cumsum
+from denoisers.butter.filter import min_lp, butter
 from plot.ploter import plot_stacked
-from portfolios import (min_ewma_port, 
+from portfolios import (min_ewma_port,
                         equal_weight_port,
-                        get_matrix, 
-                        get_cross_var_keys, 
+                        get_matrix,
+                        get_cross_var_keys,
                         get_ewma_keys,
                         vars_covars,
                         returns,
-                        download)                   
+                        download)
 
 
 
@@ -22,20 +23,20 @@ rf = 0.015
 import scipy.optimize as sco
 
 def max_SR_opt(mean_returns, cov_matrix, rf_rate, n, display = False):
-    
+
     def get_ret_vol_sr(weights, mean_returns, cov_matrix, rf_rate):
         weights = np.array(weights)
         ret = np.sum(np.array(mean_returns) * weights)
         vol = np.sqrt(np.dot(weights.T,np.dot(np.array(cov_matrix),weights)))
         sr = (ret-rf)/vol
         return np.array([ret,vol,sr])
-    
+
     # minimize negative Sharpe Ratio
-    def neg_sharpe(weights, mean_returns, cov_matrix, rf_rate): 
+    def neg_sharpe(weights, mean_returns, cov_matrix, rf_rate):
         return -get_ret_vol_sr(weights, mean_returns, cov_matrix, rf_rate)[2]
 
     # check allocation sums to 1
-    def check_sum(weights): 
+    def check_sum(weights):
         return np.sum(weights) - 1
 
     # create constraint variable
@@ -47,9 +48,9 @@ def max_SR_opt(mean_returns, cov_matrix, rf_rate, n, display = False):
     # initial guess
     init_guess = [1/n]*n
 
-    opt_results = sco.minimize(neg_sharpe, init_guess, 
-                               method='SLSQP', bounds = bounds, 
-                               constraints = cons, 
+    opt_results = sco.minimize(neg_sharpe, init_guess,
+                               method='SLSQP', bounds = bounds,
+                               constraints = cons,
                                args = (mean_returns, cov_matrix, rf_rate),
                                options = {'disp': display})
 
@@ -134,7 +135,7 @@ symbols = ['KO', 'PEP', 'PG', 'AAPL', 'JNJ', 'AMZN', 'DE', 'CAT', 'META', 'MSFT'
 symbols = ['MSFT', 'AVGO', 'PG', 'PEP', 'AAPL', 'KO', 'LMT', 'TSLA', 'ADI', 'MELI', 'JNJ', 'SPY', 'AMZN', 'META']
 
 
-def test01():
+def test_equal_weight():
 
     symbols = ['PG', 'PEP', 'AAPL']
     np.random.seed(1)
@@ -160,7 +161,7 @@ def test_denoise():
     df:pd.DataFrame = download(symbols, denoise=True)
 
     df_rets = returns(symbols, df)
-    var_s =vars_covars(df_rets)
+    var_s = vars_covars(df_rets)
 
     var_s['sum_ewma'] = var_s.mean(axis=1)
     print(var_s.tail())
@@ -168,14 +169,9 @@ def test_denoise():
     plot_stacked(symbols,var_s, k='_ewma')
     plt.show()
 
-if __name__ == '__main__':
-    symbols = ['MSFT', 'AVGO', 'PG', 'BIL', 'SPY']
-    symbols = ['BIL', 'HON', 'CL', 'AVGO', 'PG', 'PEP', 'XOM', 'KO', 'TXN', 'MO', 'XOM',
-               'PM', 'KO', 'LMT', 'INTC', 'ADI', 'HD', 'JNJ', 'WFC', 'MCD', 'T', 'GS', 'WMT', 
-               'SPY']
-
+def test_options():
     """
-        AAPL220826C00070000 
+        AAPL220826C00070000
         symbol = AAPL
         year = 2022
         date = 26
@@ -183,15 +179,15 @@ if __name__ == '__main__':
         C = call
         00070000 = 70   9999.9999
     """
-    aapl = yf.Ticker('TSLA')
+    aapl = yf.Ticker('AAPL')
     options_dates = aapl.options
-    
+
     strikes = pd.DataFrame()
     for d in options_dates:
         ex_date = datetime.strptime(d, "%Y-%m-%d").date()
         today = datetime.now().date()
         time_to_expire = ex_date - today
- 
+
         calls: pd.DataFrame = aapl.option_chain(d).calls
         vol_strike = calls[['strike', 'impliedVolatility']]
         vol_strike = vol_strike.set_index('strike')
@@ -201,7 +197,7 @@ if __name__ == '__main__':
             strikes = vol_strike
         else:
             strikes = pd.merge(strikes, vol_strike, on='strike')
-        
+
     strikes.fillna(0, inplace=True)
     print(calls.keys())
     print(strikes.tail())
@@ -218,8 +214,56 @@ if __name__ == '__main__':
     # ax.plot_wireframe(X, Y, Z, rstride=40, cstride=40)
     """
     https://jakevdp.github.io/PythonDataScienceHandbook/04.12-three-dimensional-plotting.html
+    Understanding the Particle Filter | | Autonomous Navigation, Part 2
+    https://www.youtube.com/watch?v=NrzmH_yerBU
+
+    https://www.youtube.com/watch?v=aUkBa1zMKv4
+    https://www.youtube.com/watch?v=YBeVDxTHiYM
+
+    https://www.youtube.com/watch?v=O-lAJVra1PU
+    Particle Filter Tutorial With MATLAB Part 1: Student Dave
+
+    https://www.youtube.com/watch?v=OM5iXrvUr_o
+    Particle Filter Algorithm
+
+    https://www.youtube.com/watch?v=r-bHqY5gaPw
+    CS 188 Lecture 19: Particle Filtering
+
+    https://particles-sequential-monte-carlo-in-python.readthedocs.io/en/latest/notebooks/basic_tutorial.html
+
+
     """
     plt.show()
+
+if __name__ == '__main__':
+    test_equal_weight()
+    exit()
+    symbols = ['MSFT', 'AVGO', 'PG', 'BIL', 'SPY']
+    symbols = ['BIL', 'HON', 'CL', 'AVGO', 'PG', 'PEP', 'XOM', 'KO', 'TXN', 'MO', 'XOM',
+               'PM', 'KO', 'LMT', 'INTC', 'ADI', 'HD', 'JNJ', 'WFC', 'MCD', 'T', 'GS', 'WMT',
+               'SPY']
+
+    symbols = ['AAPL', 'TSLA', 'SPY']
+
+    df:pd.DataFrame = download(symbols, denoise=False)
+    df = min_lp(symbols, df)
+    df.drop(columns=symbols, inplace=True)
+    df.rename(columns={f'{s}_deno':s for s in symbols}, inplace=True)
+
+
+
+    df_rets = returns(symbols, df)
+
+    print(df_rets.tail())
+    plot_stacked(symbols, df_rets, k='', start=250)
+
+
+    # df_rets = df_rets.ewm(alpha=.05).mean()
+    # df_rets = butter(symbols, df_rets, 70)
+    # df_rets = min_lp(symbols, df_rets)
+    # plot_stacked(symbols, df_rets, k='_deno', start=250)
+
+    print(df_rets.tail())
     exit()
 
     df = download(symbols=symbols, years=10)
@@ -234,7 +278,7 @@ if __name__ == '__main__':
         if s not in data_gt:
             data_gt[s] = {'ticker':s}
 
-        
+
         data_neg[s]['mean'] = lt_zero.mean()
         data_neg[s]['dev'] = lt_zero.std()
         data_neg[s]['count'] = lt_zero.count()
@@ -244,7 +288,7 @@ if __name__ == '__main__':
         data_gt[s]['count'] = gt_zero.count()
 
     df_neg = pd.DataFrame.from_dict(data_neg, orient='index' )
-    df_neg = df_neg.set_index('ticker')  
+    df_neg = df_neg.set_index('ticker')
     df_gt = pd.DataFrame.from_dict(data_gt, orient='index')
     df_gt = df_gt.set_index('ticker')
 
@@ -254,15 +298,15 @@ if __name__ == '__main__':
     # df_gt['sum'] = df_gt.sum(axis=1)
     # df_gt.drop('SPY', inplace=True)
 
-    # df_neg['count'] = df_neg['count'].loc['SPY'] / df_neg['count'] 
-    # df_neg['mean'] = df_neg['mean'].loc['SPY'] / df_neg['mean'] 
-    # df_neg['dev'] = df_neg['dev'].loc['SPY'] / df_neg['dev'] 
+    # df_neg['count'] = df_neg['count'].loc['SPY'] / df_neg['count']
+    # df_neg['mean'] = df_neg['mean'].loc['SPY'] / df_neg['mean']
+    # df_neg['dev'] = df_neg['dev'].loc['SPY'] / df_neg['dev']
     # df_neg['sum'] = df_neg.sum(axis=1)
     # df_neg.drop('SPY', inplace=True)
 
     # df_gt['total'] = df_neg['sum'] + df_gt['sum']
     # total = df_gt.total[symbols].sum()
-    
+
     # df_gt.total = df_gt.total / total
     print(df_neg)
     print(df_gt)
@@ -276,9 +320,7 @@ if __name__ == '__main__':
 
 
     lmbd = .94
-    ewma = False
-
-    df_ewma = vars_covars(df, lmbd, ewma=ewma)
+    df_ewma = vars_covars(df, lmbd, mode='teor')
 
     print(df_prices.tail())
     print(df_ewma.tail())
