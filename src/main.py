@@ -10,7 +10,7 @@ from denoisers.butter.filter import min_lp, butter
 from plot.ploter import plot_stacked
 from portfolios import (min_ewma_port,
                         equal_weight_port,
-                        get_matrix,
+                        get_cross_matrix,
                         get_cross_var_keys,
                         get_ewma_keys,
                         vars_covars,
@@ -78,7 +78,7 @@ def max_sharpe(symbols, df, rfr=0.0001, r=False):
     for index, row in df.iterrows():
 
         N_index += 1
-        a = get_matrix(symbols, row_item=row)
+        a = get_cross_matrix(symbols, row_item=row)
         returns = row[[e+'_ewm' for e in symbols]]
 
         if not N_index % 60:
@@ -141,19 +141,25 @@ def test_equal_weight():
     np.random.seed(1)
     symbols.sort()
 
-    df1, w = min_ewma_port(symbols)
+    df_min = min_ewma_port(symbols)
 
-    df, w1 = equal_weight_port(symbols)
-    print(df.keys())
+    df_equal = equal_weight_port(symbols)
+    print(df_equal.keys())
 
-    print(w, w1)
-    plt.plot(df1['inv_port'])
-    plt.plot(df['equal_port'], 'k')
+    diff__ = df_equal['risk']- df_min['risk']
+    print(diff__.mean())
+
+    plt.plot(df_min['risk'])
+    plt.plot(df_equal['risk'], 'k')
     plt.show()
-    plt.plot(df['equal_rela'].cumsum())
+    plt.plot(diff__)
     plt.show()
 
-from scipy import signal
+    plt.plot(df_equal['returns'].cumsum())
+    plt.show()
+    plt.plot(df_min['returns'].cumsum(), 'g')
+    plt.show()
+
 
 def test_denoise():
     symbols = ['BIL', 'HON', 'CL']

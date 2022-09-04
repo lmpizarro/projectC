@@ -41,8 +41,7 @@ def get_cumsum_keys(symbols):
         keys.append(key_var)
     return keys
 
-
-def get_matrix(symbols, row_item):
+def get_cross_matrix(symbols, row_item):
     a = np.zeros(len(symbols)*len(symbols))
     a = a.reshape(len(symbols), len(symbols))
     for i in range(len(symbols)):
@@ -54,41 +53,39 @@ def get_matrix(symbols, row_item):
             a[j,i] = row_item[key]
     return a
 
-def equal_weight_port(symbols, years=10, name='equal'):
+def equal_weight_port(symbols, years=10):
 
-    data_risk = []
-    data_rel = []
+    risk_data = np.empty( shape=(0, 0) )
+    return_data = np.empty( shape=(0, 0) )
 
     df = download(symbols=symbols, years=years)
     df = cross_matrix(symbols=symbols, df=df, mode='garch')
     df_rets = df[get_filt_keys(symbols)]
 
-
     w = np.array([1/len(symbols)] * len(symbols))
     for index, row in df.iterrows():
+        return_data = np.append(return_data, np.matmul(w, df_rets.loc[index]))
+        a = get_cross_matrix(symbols, row_item=row)
+        risk_data = np.append(risk_data, np.matmul(w, np.matmul(a, w)))
 
-        return_ = np.matmul(w, df_rets.loc[index])
-        a = get_matrix(symbols, row_item=row)
-        risk = np.matmul(w, np.matmul(a, w))
-        data_risk.append(risk)
-        data_rel.append(return_ / risk)
+    df['risk'] = np.array(risk_data)
+    df['returns'] = np.array(return_data)
 
-    df[f'{name}_port'] = np.array(data_risk)
-    df[f'{name}_rela'] = np.array(data_rel)
+    return df
 
-    return df, w
-
-def min_ewma_port(symbols:List[str], years=10, name: str='inv', period=60):
+def min_ewma_port(symbols:List[str], years=10, period=60):
     df = download(symbols=symbols, years=years)
-    df_rets = cross_matrix(symbols=symbols, df=df, mode='garch')
+    df_cross_matrix = cross_matrix(symbols=symbols, df=df, mode='garch')
+
     N = 0
-    data = []
-    weights = []
+
+    risk_data = np.empty( shape=(0, 0) )
+    return_data = np.empty( shape=(0, 0) )
     new_weight = np.array([1/len(symbols)]*len(symbols))
-    weights.append(new_weight)
-    for index, row in df_rets.iterrows():
-        a = get_matrix(symbols, row_item=row)
-        data.append(np.matmul(new_weight, np.matmul(a, new_weight)))
+    for index, row in df_cross_matrix.iterrows():
+        _matrix = get_cross_matrix(symbols, row_item=row)
+        return_data = np.append(return_data, np.matmul(new_weight, row[symbols]))
+        risk_data = np.append(risk_data, np.matmul(new_weight, np.matmul(_matrix, new_weight)))
         N +=1
         if not N%period:
             s_var = (1/row[[e+'_ewma' for e in symbols]]).sum()
@@ -96,17 +93,17 @@ def min_ewma_port(symbols:List[str], years=10, name: str='inv', period=60):
                 whts = [(1/row[e+'_ewma'])/s_var for e in symbols if s_var != 0 and row[e+'_ewma'] != 0]
             if len(whts) == len(symbols):
                 new_weight = np.array(whts)
-                weights.append(new_weight)
                 # diff_ = np.abs(w - w_old).sum()
                 # if diff_ > 0.05:
 
 
-    if len(data) == len(df_rets):
-        df_rets[f'{name}_port'] = np.array(data)
+    if len(risk_data) == len(df_cross_matrix):
+        df_cross_matrix[f'risk'] = np.array(risk_data)
+        df_cross_matrix[f'returns'] = np.array(return_data)
     else:
         raise ValueError('error len data')
 
-    return df_rets, weights
+    return df_cross_matrix
 
 
 import yfinance as yf
@@ -256,7 +253,7 @@ def test_covaria():
     symbols.remove('MRKT')
     for index, row in covaria.iterrows():
 
-        a = get_matrix(symbols, row_item=row)
+        a = get_cross_matrix(symbols, row_item=row)
 
         try:
             # print(LA.cond(a), bb)
@@ -422,8 +419,8 @@ def test_tracker():
 
 
 if __name__ == '__main__':
-    # test_tracker()
-    test_covaria()
+    test_tracker()
+    # test_covaria()
     exit()
     symbols = ['AAPL', 'MSFT', 'AMZN', 'TSLA', 'BRK-B', 'KO', 'NVDA', 'JNJ', 'META', 'PG', 'MELI', 'PEP', 'AVGO']
     symbols = ['AAPL', 'MSFT', 'AMZN', 'KO']
