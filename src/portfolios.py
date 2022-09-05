@@ -4,7 +4,7 @@ from calcs import (cumsum, returns, ewma_vars, ewma_cross_vars, cross_matrix)
 from denoisers.butter.filter import min_lp
 import matplotlib.pyplot as plt
 import copy
-from betas import market_beta
+from betas import rolling_beta_sk, rolling_beta_fussion
 
 def get_cross_var_keys(symbols):
     keys = []
@@ -324,7 +324,7 @@ def tracker02(symbols):
     print(f'residuo {np.array(residuals).mean()} '
           f'rebalanceo {np.array(rebalance_weights).mean()}')
 
-    df_c['tracker_csum'] = csum_data
+    df_c['tracker'] = csum_data
     return df_c
 
 
@@ -369,11 +369,11 @@ def test_tracker():
     # symbols.extend(symbols_min[-5:])
     symbols.append('BIL')
     symbols.append('SPY')
-    df_c = tracker02(symbols)
-    error = df_c.tracker_csum - df_c.SPY_csum
+    df_tracker = tracker02(symbols)
+    error = df_tracker.tracker - df_tracker.SPY_csum
 
-    plt.plot(df_c.tracker_csum)
-    plt.plot(df_c.SPY_csum)
+    plt.plot(df_tracker.tracker)
+    plt.plot(df_tracker.SPY_csum)
     plt.show()
 
     plt.plot(error)
@@ -382,14 +382,17 @@ def test_tracker():
     plt.plot(np.abs(error))
     plt.show()
 
+    df_tracker.rename(columns={'SPY_csum':'MRKT'}, inplace=True)
+    df_tracker = df_tracker[['tracker', 'MRKT']]
+    print(df_tracker.tail())
 
-    alpha, df_c['beta'] = market_beta(df_c.SPY_csum, df_c.tracker_csum)
+    df_beta = rolling_beta_fussion(df_tracker)
 
-    plt.plot(df_c['beta'])
+    plt.plot(df_beta['tracker'])
     plt.show()
 
     print(f'ERRORS {error.mean()} {np.abs(error).mean()}')
-    print(f'beta {df_c["beta"].mean()}')
+    print(f'beta {df_beta["tracker"].mean()}')
 
 
 if __name__ == '__main__':

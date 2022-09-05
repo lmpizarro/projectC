@@ -9,6 +9,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import HuberRegressor
 from sklearn.linear_model import RANSACRegressor
 from sklearn.linear_model import TheilSenRegressor
+import pandas as pd
 
 """
 https://machinelearningmastery.com/robust-regression-for-machine-learning-in-python/
@@ -105,19 +106,15 @@ def rolling_beta_fussion(df, N=60):
     df_betas1.drop(columns=['MRKT'], inplace=True)
     df_betas2.drop(columns=['MRKT'], inplace=True)
 
-    print(df_betas1.tail())
-    print(df_betas2.tail())
-
     symbols.append('MRKT')
     df1.rename(columns={'SPY':'MRKT'}, inplace=True)
     df_c = cross_matrix(symbols, df1)
-    betas = beta_by_ewma(symbols, df_c)
+    beta_ewma = beta_by_ewma(symbols, df_c)
 
-    betas.drop(columns=['MRKT'], inplace=True)
-    print(betas.tail())
-
+    beta_ewma.drop(columns=['MRKT'], inplace=True)
+    
     for s in df_betas2.keys():
-        df_1[s] = .33*df_betas2[s] + .33*df_betas1[s] + .33*betas[s]
+        df_1[s] = .33*df_betas2[s] + .33*df_betas1[s] + .33*beta_ewma[s]
 
     return df_1
 

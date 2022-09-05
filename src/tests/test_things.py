@@ -144,4 +144,4 @@ def test_beta_covar():
     print(betas.tail())
 
 if __name__ == '__main__':
-    test_denoise()
+    test_betas()
