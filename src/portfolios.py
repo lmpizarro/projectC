@@ -325,7 +325,7 @@ def tracker02(symbols):
           f'rebalanceo {np.array(rebalance_weights).mean()}')
 
     df_c['tracker'] = csum_data
-    return df_c
+    return df_c[['tracker', 'SPY_csum']]
 
 
 def min_distances():
@@ -384,7 +384,7 @@ def test_tracker():
 
     df_tracker.rename(columns={'SPY_csum':'MRKT'}, inplace=True)
     df_tracker = df_tracker[['tracker', 'MRKT']]
-    print(df_tracker.tail())
+    print(df_tracker.tail(1))
 
     df_beta = rolling_beta_fussion(df_tracker)
 
