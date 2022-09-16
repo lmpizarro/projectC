@@ -13,35 +13,51 @@ from numba import njit
 yield_maturities = np.array([1/12, 2/12, 3/12, 6/12, 1, 2, 3, 5, 7, 10, 20, 30])
 yeilds = np.array([0.15,0.27,0.50,0.93,1.52,2.13,2.32,2.34,2.37,2.32,2.65,2.52]).astype(float)/100
 
-@njit()
-def heston_charfunc(phi, S0, v0, kappa, theta, sigma, rho, lambd, tau, r):
+class HestonParameters:
 
-    # constants
-    a = kappa*theta
-    b = kappa+lambd
+    @staticmethod
+    @njit()
+    def heston_charfunc(phi, S0, v0, kappa, theta, sigma, rho, lambd, tau, r):
 
-    # common terms w.r.t phi
-    rspi = rho*sigma*phi*1j
+        # constants
+        a = kappa*theta
+        b = kappa+lambd
 
-    # define d parameter given phi and b
-    d = np.sqrt( (rho*sigma*phi*1j - b)**2 + (phi*1j+phi**2)*sigma**2 )
+        # common terms w.r.t phi
+        rspi = rho*sigma*phi*1j
 
-    # define g parameter given phi, b and d
-    g = (b-rspi+d)/(b-rspi-d)
+        # define d parameter given phi and b
+        d = np.sqrt( (rho*sigma*phi*1j - b)**2 + (phi*1j+phi**2)*sigma**2 )
 
-    # calculate characteristic function by components
-    exp1 = np.exp(r*phi*1j*tau)
-    term2 = S0**(phi*1j) * ( (1-g*np.exp(d*tau))/(1-g) )**(-2*a/sigma**2)
-    exp2 = np.exp(a*tau*(b-rspi+d)/sigma**2 + v0*(b-rspi+d)*( (1-np.exp(d*tau))/(1-g*np.exp(d*tau)) )/sigma**2)
+        # define g parameter given phi, b and d
+        g = (b-rspi+d)/(b-rspi-d)
 
-    return exp1*term2*exp2
+        # calculate characteristic function by components
+        exp1 = np.exp(r*phi*1j*tau)
+        term2 = S0**(phi*1j) * ( (1-g*np.exp(d*tau))/(1-g) )**(-2*a/sigma**2)
+        exp2 = np.exp(a*tau*(b-rspi+d)/sigma**2 + v0*(b-rspi+d)*( (1-np.exp(d*tau))/(1-g*np.exp(d*tau)) )/sigma**2)
 
-@njit()
-def integrand(phi, S0, v0, kappa, theta, sigma, rho, lambd, tau, r, K):
-    args = (S0, v0, kappa, theta, sigma, rho, lambd, tau, r)
-    numerator = np.exp(r*tau)*heston_charfunc(phi-1j,*args) - K*heston_charfunc(phi,*args)
-    denominator = 1j*phi*K**(1j*phi)
-    return numerator/denominator
+        return exp1*term2*exp2
+
+    @staticmethod
+    @njit()
+    def integrand(phi, S0, v0, kappa, theta, sigma, rho, lambd, tau, r, K):
+        args = (S0, v0, kappa, theta, sigma, rho, lambd, tau, r)
+        numerator = np.exp(r*tau)*HestonParameters.heston_charfunc(phi-1j,*args) - \
+                        K*HestonParameters.heston_charfunc(phi,*args)
+        denominator = 1j*phi*K**(1j*phi)
+        return numerator/denominator
+
+    @staticmethod
+    @njit()
+    def heston_price(S0, K, v0, kappa, theta, sigma, rho, lambd, tau, r):
+        args = (S0, v0, kappa, theta, sigma, rho, lambd, tau, r, K)
+
+        real_integral, err = np.real( quad(HestonParameters.integrand, 0, 100, args=args) )
+
+        return (S0 - K*np.exp(-r*tau))/2 + real_integral/np.pi
+
+
 
 def heston_price_rec(S0, K, v0, kappa, theta, sigma, rho, lambd, tau, r):
     args = (S0, v0, kappa, theta, sigma, rho, lambd, tau, r)
@@ -52,20 +68,14 @@ def heston_price_rec(S0, K, v0, kappa, theta, sigma, rho, lambd, tau, r):
     for i in range(1,N):
         # rectangular integration
         phi = dphi * (2*i + 1)/2 # midpoint to calculate height
-        numerator = np.exp(r*tau)*heston_charfunc(phi-1j,*args) - K * heston_charfunc(phi,*args)
+        numerator = np.exp(r*tau)*HestonParameters.heston_charfunc(phi-1j,*args) - \
+            K * HestonParameters.heston_charfunc(phi,*args)
+
         denominator = 1j*phi*K**(1j*phi)
 
         P += dphi * numerator/denominator
 
     return np.real((S0 - K*np.exp(-r*tau))/2 + P/np.pi)
-
-@njit()
-def heston_price(S0, K, v0, kappa, theta, sigma, rho, lambd, tau, r):
-    args = (S0, v0, kappa, theta, sigma, rho, lambd, tau, r, K)
-
-    real_integral, err = np.real( quad(integrand, 0, 100, args=args) )
-
-    return (S0 - K*np.exp(-r*tau))/2 + real_integral/np.pi
 
 
 def SqErr(x):
@@ -138,7 +148,7 @@ def get_vol_surface(ticker:str):
     return volSurfaceLong, S0
 
 if __name__ == '__main__':
-    volSurfaceLong, S0 = get_vol_surface('SPY')
+    volSurfaceLong, S0 = get_vol_surface('TSLA')
 
     # This is the calibration function
     # heston_price(S0, K, v0, kappa, theta, sigma, rho, lambd, tau, r)
@@ -165,10 +175,12 @@ if __name__ == '__main__':
 
     v0, kappa, theta, sigma, rho, lambd = [param for param in result.x]
     print(v0, kappa, theta, sigma, rho, lambd)
-    # 15 09
+    # 15 09 SPY
     # theta 0.07049825885996333
     # kappa 3.3900924886498793
     # sigma 0.47390978289578967
     # rho  -0.7807785506141585
     # v0    0.05814620900128352
     # lambda 0.1869936190997598
+    # tsla
+    # 0.1 0.0009999999999998899 0.1 0.010147513947524223 0.0 -1.0
