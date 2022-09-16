@@ -7,16 +7,16 @@ import pandas as pd
 
 def implied_volatility(ticker:str):
 
-    aapl = yf.Ticker(ticker)
-    options_dates = aapl.options
+    ticker = yf.Ticker(ticker)
+    options_dates = ticker.options
 
+    today = datetime.now().date()
     implied_volatility = pd.DataFrame()
     for d in options_dates:
         ex_date = datetime.strptime(d, "%Y-%m-%d").date()
-        today = datetime.now().date()
         time_to_expire = ex_date - today
 
-        calls: pd.DataFrame = aapl.option_chain(d).calls
+        calls: pd.DataFrame = ticker.option_chain(d).calls
         """
             ['contractSymbol', 'lastTradeDate', 'strike', 'lastPrice', 'bid', 'ask',
              'change', 'percentChange', 'volume', 'openInterest',
@@ -111,7 +111,6 @@ def setup_model(_yield_ts, _dividend_ts, _spot,
     model = ql.HestonModel(process)
     engine = ql.AnalyticHestonEngine(model)
     return model, engine
-summary= []
 
 def test01():
     pkl_path ='/home/lmpizarro/devel/project/financeExperiments/projectC/src/iv.pkl'
@@ -219,11 +218,11 @@ class MyBounds(object):
          tmax = bool(np.all(x <= self.xmax))
          tmin = bool(np.all(x >= self.xmin))
          return tmax and tmin
-bounds = [(0,1),(0.01,15), (0.01,1.), (-1,1), (0,1.0) ]
-
 
 
 if __name__ == '__main__':
+    bounds = [(0,1),(0.01,15), (0.01,1.), (-1,1), (0,1.0) ]
+    summary= []
     from scipy.optimize import differential_evolution
 
     pkl_path ='/home/lmpizarro/devel/project/financeExperiments/projectC/src/iv.pkl'
@@ -278,7 +277,7 @@ if __name__ == '__main__':
 
     """
         https://machinelearningmastery.com/basin-hopping-optimization-in-python/
-        
+
     """
     model5, engine5 = setup_model(
     yield_ts, dividend_ts, spot,
@@ -290,6 +289,9 @@ if __name__ == '__main__':
     initial_condition = list(model5.params())
 
     from scipy.optimize import basinhopping
+    """
+    http://gouthamanbalaraman.com/blog/valuing-european-option-heston-model-quantLib.html
+    """
 
     mybound = MyBounds()
     minimizer_kwargs = {"method": "L-BFGS-B", "bounds": bounds }
