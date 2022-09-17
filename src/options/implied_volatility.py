@@ -3,50 +3,7 @@ import yfinance as yf
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-
-
-def implied_volatility(ticker:str):
-
-    ticker = yf.Ticker(ticker)
-    options_dates = ticker.options
-
-    today = datetime.now().date()
-    implied_volatility = pd.DataFrame()
-    for d in options_dates:
-        ex_date = datetime.strptime(d, "%Y-%m-%d").date()
-        time_to_expire = ex_date - today
-
-        calls: pd.DataFrame = ticker.option_chain(d).calls
-        """
-            ['contractSymbol', 'lastTradeDate', 'strike', 'lastPrice', 'bid', 'ask',
-             'change', 'percentChange', 'volume', 'openInterest',
-             'impliedVolatility', 'inTheMoney', 'contractSize', 'currency']
-        """
-        imp_vol_strike = calls[['strike', 'impliedVolatility']]
-        imp_vol_strike = imp_vol_strike.set_index('strike')
-        imp_vol_strike.rename(columns={'impliedVolatility':time_to_expire.days}, inplace=True)
-        if implied_volatility.empty:
-            implied_volatility = imp_vol_strike
-        else:
-            implied_volatility = pd.merge(implied_volatility, imp_vol_strike, on='strike')
-
-    return implied_volatility
-
-def draw_implied_volatility(implied_volatility: pd.DataFrame):
-
-    # https://jakevdp.github.io/PythonDataScienceHandbook/04.12-three-dimensional-plotting.html
-    plt.plot(implied_volatility.index, implied_volatility[implied_volatility.keys()])
-    plt.show()
-    from matplotlib import cm
-    x = np.array(implied_volatility.columns, dtype="float64")
-    y = implied_volatility.index
-    X,Y = np.meshgrid(x,y)
-    Z = np.array(implied_volatility, dtype="float64")
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.plot_surface(X, Y, Z, cmap=cm.hot, linewidth=0, antialiased=True)
-    # ax.plot_wireframe(X, Y, Z, rstride=40, cstride=40)
-    plt.show()
+from data_from_yf import get_iv_surface
 
 import QuantLib as ql
 

@@ -2,7 +2,7 @@ import numpy as np
 from scipy.integrate import quad
 from scipy.optimize import minimize
 from numba import njit
-from data_from_yf import get_vol_surface
+from data_from_yf import get_surface_PKT
 
 
 class HestonParameters:
@@ -94,7 +94,7 @@ if __name__ == '__main__':
     rate_structure = {'yields': yields,
                       'maturities': yield_maturities}
 
-    volSurfaceLong, S0 = get_vol_surface('TSLA', rate_structure)
+    volSurfaceLong, _, S0 = get_surface_PKT('TSLA', rate_structure)
 
     # This is the calibration function
     # heston_price(S0, K, v0, kappa, theta, sigma, rho, lambd, tau, r)
