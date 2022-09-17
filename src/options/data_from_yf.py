@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
 
-def get_iv_surface(ticker:str):
+def get_surface_IVKT(ticker:str):
 
     ticker = yf.Ticker(ticker)
     options_dates = ticker.options
@@ -34,7 +34,7 @@ def get_iv_surface(ticker:str):
 
     return implied_volatility
 
-def draw_iv_F_T_K_2D(iv: pd.DataFrame):
+def draw_IVKT_2D(iv: pd.DataFrame):
 
     # https://matplotlib.org/stable/gallery/subplots_axes_and_figures/subplots_demo.html
     # keys = T (maturities)
@@ -55,7 +55,7 @@ def draw_iv_F_T_K_2D(iv: pd.DataFrame):
 
     plt.show()
 
-def draw_iv_F_T_K_3D(iv_surface: pd.DataFrame):
+def draw_IVKT_3D(iv_surface: pd.DataFrame):
 
     # https://jakevdp.github.io/PythonDataScienceHandbook/04.12-three-dimensional-plotting.html
 
@@ -123,7 +123,7 @@ def get_surface_PKT(ticker:str, rate_structure):
 
     return volSurfaceLong, volSurface, S0
 
-def plotly_P_F_K_T_3D(volSurfaceLong: pd.DataFrame):
+def plotly_PKT_3D(volSurfaceLong: pd.DataFrame):
     import plotly.graph_objects as go
     from plotly.graph_objs import Surface
 
@@ -143,7 +143,7 @@ def plotly_P_F_K_T_3D(volSurfaceLong: pd.DataFrame):
         )
     fig.show()
 
-def plot_P_F_K_T_3D(volSurfacePKT):
+def plot_PKT_3D(volSurfacePKT):
 
     K = np.array(volSurfacePKT.columns, dtype="float64") # strikes
     T = volSurfacePKT.index  # maturities
@@ -170,4 +170,4 @@ if __name__ == '__main__':
     print(iv)
 
 
-    plot_P_F_K_T_3D(iv)
+    plot_PKT_3D(iv)
