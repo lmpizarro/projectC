@@ -165,8 +165,9 @@ def plot_PKT_3D(volSurfacePKT):
 
 
 if __name__ == '__main__':
+    # https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_yield_curve&field_tdr_date_value_month=202209
     yield_maturities = np.array([1/12, 2/12, 3/12, 6/12, 1, 2, 3, 5, 7, 10, 20, 30])
-    yields = np.array([0.15,0.27,0.50,0.93,1.52,2.13,2.32,2.34,2.37,2.32,2.65,2.52]).astype(float)/100
+    yields = np.array([2.68, 3.01, 3.20, 3.77, 3.96, 3.85, 3.81, 3.62, 3.56, 3.45, 3.79, 3.52]).astype(float)/100
 
     rate_structure = {'yields': yields,
                       'maturities': yield_maturities}
