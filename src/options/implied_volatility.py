@@ -3,7 +3,7 @@ import yfinance as yf
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-from data_from_yf import get_iv_surface
+from data_from_yf import get_surface_IVKT
 
 import QuantLib as ql
 

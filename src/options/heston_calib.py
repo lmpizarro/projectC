@@ -2,7 +2,7 @@ import numpy as np
 from scipy.integrate import quad
 from scipy.optimize import minimize
 from numba import njit
-from data_from_yf import get_surface_PKT
+from data_from_yf import get_surface_PKT, surface_PKT_to_long
 
 
 class HestonParameters:
@@ -94,16 +94,18 @@ if __name__ == '__main__':
     rate_structure = {'yields': yields,
                       'maturities': yield_maturities}
 
-    volSurfaceLong, _, S0 = get_surface_PKT('TSLA', rate_structure)
+    surface_pkt, S0 = get_surface_PKT('TSLA')
+
+    surface_pkt_long = surface_PKT_to_long(surface_pkt, rate_structure)
 
     # This is the calibration function
     # heston_price(S0, K, v0, kappa, theta, sigma, rho, lambd, tau, r)
     # Parameters are v0, kappa, theta, sigma, rho, lambd
     # Define variables to be used in optimization
-    r = volSurfaceLong['rate'].to_numpy('float')
-    K = volSurfaceLong['strike'].to_numpy('float')
-    tau = volSurfaceLong['maturity'].to_numpy('float')
-    P = volSurfaceLong['price'].to_numpy('float')
+    r = surface_pkt_long['rate'].to_numpy('float')
+    K = surface_pkt_long['strike'].to_numpy('float')
+    tau = surface_pkt_long['maturity'].to_numpy('float')
+    P = surface_pkt_long['price'].to_numpy('float')
 
     params_minimizer = {"v0": {"x0": 0.1, "lbub": [1e-3,0.1]},
               "kappa": {"x0": 3, "lbub": [1e-3,5]},

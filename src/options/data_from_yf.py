@@ -73,7 +73,7 @@ def draw_IVKT_3D(iv_surface: pd.DataFrame):
     plt.show()
 
 
-def get_surface_PKT(ticker:str, rate_structure):
+def get_surface_PKT(ticker:str):
 
     market_prices = {}
 
@@ -110,18 +110,25 @@ def get_surface_PKT(ticker:str, rate_structure):
     volSurface = pd.DataFrame(price_arr, index = maturities, columns = common_strikes)
     volSurface = volSurface.iloc[(volSurface.index > 0.04)]
 
+    return volSurface, S0
+
+def yield_curve_fit(rate_structure):
+    yield_maturities = rate_structure['maturities']
+    yields = rate_structure['yields']
+    curve_fit, status = calibrate_nss_ols(yield_maturities,yields)
+
+    return curve_fit
+
+def surface_PKT_to_long(volSurface:pd.DataFrame, rate_structure):
+
     # Convert our vol surface to dataframe for each option price with parameters
     volSurfaceLong = volSurface.melt(ignore_index=False).reset_index()
     volSurfaceLong.columns = ['maturity', 'strike', 'price']
     # Calculate the risk free rate for each maturity using the fitted yield curve
 
-    yield_maturities = rate_structure['maturities']
-    yields = rate_structure['yields']
-    curve_fit, status = calibrate_nss_ols(yield_maturities,yields)
+    volSurfaceLong['rate'] = volSurfaceLong['maturity'].apply(yield_curve_fit(rate_structure))
 
-    volSurfaceLong['rate'] = volSurfaceLong['maturity'].apply(curve_fit)
-
-    return volSurfaceLong, volSurface, S0
+    return volSurfaceLong
 
 def plotly_PKT_3D(volSurfaceLong: pd.DataFrame):
     import plotly.graph_objects as go
@@ -165,9 +172,42 @@ if __name__ == '__main__':
                       'maturities': yield_maturities}
 
 
-    _, iv, _ = get_surface_PKT('AAPL', rate_structure)
+    surface_pkt, S0 = get_surface_PKT('AAPL')
+    surface_pkt_long = surface_PKT_to_long(surface_pkt, rate_structure)
 
-    print(iv)
+    plot_PKT_3D(surface_pkt)
+
+    import py_vollib_vectorized
 
 
-    plot_PKT_3D(iv)
+    flag = 'c'
+    surface_pkt_long['iv'] = \
+        py_vollib_vectorized.implied_volatility.vectorized_implied_volatility(price=surface_pkt_long['price'],
+        S=S0, K=surface_pkt_long['strike'],
+        t=surface_pkt_long['maturity'],
+        r=surface_pkt_long['rate'],
+        flag=flag, q=0, return_as='numpy',
+        model="black_scholes_merton")
+
+
+    surface_pkt_long.drop(columns=['price', 'rate'], inplace=True)
+
+
+    print(surface_pkt_long)
+
+    # https://www.digitalocean.com/community/tutorials/pandas-melt-unmelt-pivot-function
+    surface_IVKT_estim = surface_pkt_long.pivot(index='maturity', columns='strike')
+    surface_IVKT_estim.fillna(inplace=True, method='ffill')
+    print(surface_IVKT_estim)
+
+
+    surface_IVKT_estim = surface_IVKT_estim.iv
+    strikes = surface_IVKT_estim.keys()
+    maturities = surface_IVKT_estim.index
+
+    for t in maturities:
+        plt.plot(strikes, surface_IVKT_estim.loc[t])
+    plt.show()
+
+
+
