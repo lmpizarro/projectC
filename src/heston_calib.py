@@ -10,8 +10,57 @@ from scipy.optimize import minimize
 from numba import njit
 
 
-yield_maturities = np.array([1/12, 2/12, 3/12, 6/12, 1, 2, 3, 5, 7, 10, 20, 30])
-yeilds = np.array([0.15,0.27,0.50,0.93,1.52,2.13,2.32,2.34,2.37,2.32,2.65,2.52]).astype(float)/100
+def get_vol_surface(ticker:str, rate_structures):
+
+    market_prices = {}
+
+    Ticker = yf.Ticker(ticker)
+    options_dates = Ticker.options
+    S0 = Ticker.info['regularMarketPrice']
+
+    for option_date in options_dates:
+        calls: pd.DataFrame = Ticker.option_chain(option_date).calls
+        calls['price'] = (calls['bid'] + calls['ask']) / 2
+        market_prices[option_date] = {}
+        market_prices[option_date]['strike'] = list(calls['strike'])
+        market_prices[option_date]['price'] = list(calls['price'])
+
+    all_strikes = [v['strike'] for i,v in market_prices.items()]
+    common_strikes = set.intersection(*map(set,all_strikes))
+    print('Number of common strikes:', len(common_strikes))
+    common_strikes = sorted(common_strikes)
+    # print(market_prices)
+
+    prices = []
+    maturities = []
+    today = datetime.now().date()
+    for date, v in market_prices.items():
+        exp_date = datetime.strptime(date, "%Y-%m-%d").date()
+        maturity = exp_date - today
+        maturities.append(maturity.days/365.25)
+
+        price = [v['price'][i] for i,x in enumerate(v['strike']) if x in common_strikes]
+        prices.append(price)
+
+    price_arr = np.array(prices, dtype=object)
+    print(np.shape(price_arr))
+
+    volSurface = pd.DataFrame(price_arr, index = maturities, columns = common_strikes)
+    volSurface = volSurface.iloc[(volSurface.index > 0.04)]
+
+    # Convert our vol surface to dataframe for each option price with parameters
+    volSurfaceLong = volSurface.melt(ignore_index=False).reset_index()
+    volSurfaceLong.columns = ['maturity', 'strike', 'price']
+    # Calculate the risk free rate for each maturity using the fitted yield curve
+
+    yield_maturities = rate_structure['maturities']
+    yields = rate_structure['yields']
+    curve_fit, status = calibrate_nss_ols(yield_maturities,yields)
+
+    volSurfaceLong['rate'] = volSurfaceLong['maturity'].apply(curve_fit)
+    print(volSurfaceLong.head())
+
+    return volSurfaceLong, S0
 
 class HestonParameters:
 
@@ -96,59 +145,14 @@ def SqErr(x):
 
 
 
-
-def get_vol_surface(ticker:str):
-
-    market_prices = {}
-
-    Ticker = yf.Ticker(ticker)
-    options_dates = Ticker.options
-    S0 = Ticker.info['regularMarketPrice']
-
-    for option_date in options_dates:
-        calls: pd.DataFrame = Ticker.option_chain(option_date).calls
-        calls['price'] = (calls['bid'] + calls['ask']) / 2
-        market_prices[option_date] = {}
-        market_prices[option_date]['strike'] = list(calls['strike'])
-        market_prices[option_date]['price'] = list(calls['price'])
-
-    all_strikes = [v['strike'] for i,v in market_prices.items()]
-    common_strikes = set.intersection(*map(set,all_strikes))
-    print('Number of common strikes:', len(common_strikes))
-    common_strikes = sorted(common_strikes)
-    # print(market_prices)
-
-    prices = []
-    maturities = []
-    today = datetime.now().date()
-    for date, v in market_prices.items():
-        exp_date = datetime.strptime(date, "%Y-%m-%d").date()
-        maturity = exp_date - today
-        maturities.append(maturity.days/365.25)
-
-        price = [v['price'][i] for i,x in enumerate(v['strike']) if x in common_strikes]
-        prices.append(price)
-
-    price_arr = np.array(prices, dtype=object)
-    print(np.shape(price_arr))
-
-    volSurface = pd.DataFrame(price_arr, index = maturities, columns = common_strikes)
-    volSurface = volSurface.iloc[(volSurface.index > 0.04)]
-
-    # Convert our vol surface to dataframe for each option price with parameters
-    volSurfaceLong = volSurface.melt(ignore_index=False).reset_index()
-    volSurfaceLong.columns = ['maturity', 'strike', 'price']
-    # Calculate the risk free rate for each maturity using the fitted yield curve
-
-    curve_fit, status = calibrate_nss_ols(yield_maturities,yeilds)
-
-    volSurfaceLong['rate'] = volSurfaceLong['maturity'].apply(curve_fit)
-    print(volSurfaceLong.head())
-
-    return volSurfaceLong, S0
-
 if __name__ == '__main__':
-    volSurfaceLong, S0 = get_vol_surface('TSLA')
+    yield_maturities = np.array([1/12, 2/12, 3/12, 6/12, 1, 2, 3, 5, 7, 10, 20, 30])
+    yields = np.array([0.15,0.27,0.50,0.93,1.52,2.13,2.32,2.34,2.37,2.32,2.65,2.52]).astype(float)/100
+
+    rate_structure = {'yields': yields,
+                      'maturities': yield_maturities}
+
+    volSurfaceLong, S0 = get_vol_surface('TSLA', rate_structure)
 
     # This is the calibration function
     # heston_price(S0, K, v0, kappa, theta, sigma, rho, lambd, tau, r)
@@ -159,7 +163,7 @@ if __name__ == '__main__':
     tau = volSurfaceLong['maturity'].to_numpy('float')
     P = volSurfaceLong['price'].to_numpy('float')
 
-    params = {"v0": {"x0": 0.1, "lbub": [1e-3,0.1]},
+    params_minimizer = {"v0": {"x0": 0.1, "lbub": [1e-3,0.1]},
               "kappa": {"x0": 3, "lbub": [1e-3,5]},
               "theta": {"x0": 0.05, "lbub": [1e-3,0.1]},
               "sigma": {"x0": 0.3, "lbub": [1e-2,1]},
@@ -167,8 +171,8 @@ if __name__ == '__main__':
               "lambd": {"x0": 0.03, "lbub": [-1,1]},
             }
 
-    x0 = [param["x0"] for key, param in params.items()]
-    bnds = [param["lbub"] for key, param in params.items()]
+    x0 = [param["x0"] for key, param in params_minimizer.items()]
+    bnds = [param["lbub"] for key, param in params_minimizer.items()]
 
     print('begin')
     result = minimize(SqErr, x0, tol = 1e-3, method='SLSQP', options={'maxiter': 1e4 }, bounds=bnds)
