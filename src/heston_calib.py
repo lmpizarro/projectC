@@ -107,24 +107,24 @@ class HestonParameters:
         return (S0 - K*np.exp(-r*tau))/2 + real_integral/np.pi
 
 
+    @staticmethod
+    def heston_price_rec(S0, K, v0, kappa, theta, sigma, rho, lambd, tau, r):
+        args = (S0, v0, kappa, theta, sigma, rho, lambd, tau, r)
 
-def heston_price_rec(S0, K, v0, kappa, theta, sigma, rho, lambd, tau, r):
-    args = (S0, v0, kappa, theta, sigma, rho, lambd, tau, r)
+        Prices, umax, N = 0, 100, 10000
+        dphi=umax/N #dphi is width
 
-    P, umax, N = 0, 100, 10000
-    dphi=umax/N #dphi is width
+        for i in range(1,N):
+            # rectangular integration
+            phi = dphi * (2*i + 1)/2 # midpoint to calculate height
+            numerator = np.exp(r*tau)*HestonParameters.heston_charfunc(phi-1j,*args) - \
+                K * HestonParameters.heston_charfunc(phi,*args)
 
-    for i in range(1,N):
-        # rectangular integration
-        phi = dphi * (2*i + 1)/2 # midpoint to calculate height
-        numerator = np.exp(r*tau)*HestonParameters.heston_charfunc(phi-1j,*args) - \
-            K * HestonParameters.heston_charfunc(phi,*args)
+            denominator = 1j*phi*K**(1j*phi)
 
-        denominator = 1j*phi*K**(1j*phi)
+            Prices += dphi * numerator/denominator
 
-        P += dphi * numerator/denominator
-
-    return np.real((S0 - K*np.exp(-r*tau))/2 + P/np.pi)
+        return np.real((S0 - K*np.exp(-r*tau))/2 + Prices/np.pi)
 
 
 def SqErr(x):
@@ -135,14 +135,13 @@ def SqErr(x):
     #               for P_i, K_i, tau_i, r_i in zip(marketPrices, K, tau, r)])
 
     # Decided to use rectangular integration function in the end
-    err = np.sum( (P-heston_price_rec(S0, K, v0, kappa, theta, sigma, rho, lambd, tau, r))**2 / len(P) )
+    err = np.sum( (P-HestonParameters.heston_price_rec(S0, K, v0, kappa, theta, sigma, rho, lambd, tau, r))**2 / len(P) )
     print(f'...........{err}')
 
     # Zero penalty term - no good guesses for parameters
     pen = 0 #np.sum( [(x_i-x0_i)**2 for x_i, x0_i in zip(x, x0)] )
 
     return err + pen
-
 
 
 if __name__ == '__main__':
@@ -175,7 +174,8 @@ if __name__ == '__main__':
     bnds = [param["lbub"] for key, param in params_minimizer.items()]
 
     print('begin')
-    result = minimize(SqErr, x0, tol = 1e-3, method='SLSQP', options={'maxiter': 1e4 }, bounds=bnds)
+    result = minimize(SqErr, x0, tol = 1e-3, method='SLSQP',
+                      options={'maxiter': 1e4 }, bounds=bnds)
 
     v0, kappa, theta, sigma, rho, lambd = [param for param in result.x]
     print(v0, kappa, theta, sigma, rho, lambd)
