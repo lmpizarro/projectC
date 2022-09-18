@@ -1,7 +1,5 @@
 from datetime import datetime, timedelta
-import yfinance as yf
 import numpy as np
-import matplotlib.pyplot as plt
 import pandas as pd
 from data_from_yf import get_surface_IVKT
 
@@ -183,6 +181,7 @@ if __name__ == '__main__':
     from scipy.optimize import differential_evolution
 
     pkl_path ='/home/lmpizarro/devel/project/financeExperiments/projectC/src/iv.pkl'
+    # iv = get_surface_IVKT('AAPL')
     iv = pd.read_pickle(pkl_path)
     day_count = ql.Actual365Fixed()
     calendar = ql.UnitedStates()

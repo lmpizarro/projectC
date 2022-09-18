@@ -1,7 +1,6 @@
 import yfinance as yf
 from datetime import datetime
 import pandas as pd
-from nelson_siegel_svensson import NelsonSiegelSvenssonCurve
 from nelson_siegel_svensson.calibrate import calibrate_nss_ols
 import numpy as np
 import matplotlib.pyplot as plt
@@ -34,13 +33,13 @@ def get_surface_IVKT(ticker:str):
 
     return implied_volatility
 
-def draw_IVKT_2D(iv: pd.DataFrame):
+def plot_IVKT_2D(ivkt: pd.DataFrame):
 
     # https://matplotlib.org/stable/gallery/subplots_axes_and_figures/subplots_demo.html
     # keys = T (maturities)
     # x = K
-    Ks = iv.index
-    maturities = iv.keys()
+    Ks = ivkt.index
+    maturities = ivkt.keys()
 
     cls_= len(maturities) // 2 + 1
     fig, axs = plt.subplots(cls_, 2)
@@ -48,14 +47,14 @@ def draw_IVKT_2D(iv: pd.DataFrame):
     graph_counter = 0
     for i in range(cls_):
         for j in range(2):
-            axs[i, j].plot(Ks, iv[maturities[j]])
+            axs[i, j].plot(Ks, ivkt[maturities[j]])
             graph_counter += 1
             if graph_counter == len(maturities):
                 break
 
     plt.show()
 
-def draw_IVKT_3D(iv_surface: pd.DataFrame):
+def plot_IVKT_3D(iv_surface: pd.DataFrame):
 
     # https://jakevdp.github.io/PythonDataScienceHandbook/04.12-three-dimensional-plotting.html
 
@@ -164,10 +163,54 @@ def plot_PKT_3D(volSurfacePKT):
     plt.show()
 
 
+def plot_xy_interpolate(x, y):
+
+    from scipy import interpolate
+
+    tck,u     = interpolate.splprep( [x,y] ,s = 0 )
+    xnew,ynew = interpolate.splev( np.linspace( 0, 1, 100 ), tck,der = 0)
+
+    plt.plot(yield_maturities, yields, 'o', xnew, ynew)
+    plt.show()
+
+
+def estimate_iv_vollib(surface_pkt_long):
+    import py_vollib_vectorized
+
+
+    flag = 'c'
+    surface_pkt_long['iv'] = \
+        py_vollib_vectorized.implied_volatility.vectorized_implied_volatility(price=surface_pkt_long['price'],
+            S=S0, K=surface_pkt_long['strike'],
+            t=surface_pkt_long['maturity'],
+            r=surface_pkt_long['rate'],
+            flag=flag, q=0, return_as='numpy',
+            model="black_scholes_merton")
+
+
+    surface_pkt_long.drop(columns=['price', 'rate'], inplace=True)
+
+    # https://www.digitalocean.com/community/tutorials/pandas-melt-unmelt-pivot-function
+    surface_IVKT_estim = surface_pkt_long.pivot(index='maturity', columns='strike')
+    surface_IVKT_estim.fillna(inplace=True, method='ffill')
+    surface_IVKT_estim = surface_IVKT_estim.iv
+
+
+    strikes = surface_IVKT_estim.keys()
+    maturities = surface_IVKT_estim.index
+
+    for t in maturities:
+        plt.plot(strikes, surface_IVKT_estim.loc[t])
+    plt.show()
+
+    return surface_IVKT_estim
+
+
 if __name__ == '__main__':
     # https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_yield_curve&field_tdr_date_value_month=202209
     yield_maturities = np.array([1/12, 2/12, 3/12, 6/12, 1, 2, 3, 5, 7, 10, 20, 30])
     yields = np.array([2.68, 3.01, 3.20, 3.77, 3.96, 3.85, 3.81, 3.62, 3.56, 3.45, 3.79, 3.52]).astype(float)/100
+
 
     rate_structure = {'yields': yields,
                       'maturities': yield_maturities}
@@ -178,37 +221,7 @@ if __name__ == '__main__':
 
     plot_PKT_3D(surface_pkt)
 
-    import py_vollib_vectorized
+    s_iv_estim = estimate_iv_vollib(surface_pkt_long)
 
-
-    flag = 'c'
-    surface_pkt_long['iv'] = \
-        py_vollib_vectorized.implied_volatility.vectorized_implied_volatility(price=surface_pkt_long['price'],
-        S=S0, K=surface_pkt_long['strike'],
-        t=surface_pkt_long['maturity'],
-        r=surface_pkt_long['rate'],
-        flag=flag, q=0, return_as='numpy',
-        model="black_scholes_merton")
-
-
-    surface_pkt_long.drop(columns=['price', 'rate'], inplace=True)
-
-
-    print(surface_pkt_long)
-
-    # https://www.digitalocean.com/community/tutorials/pandas-melt-unmelt-pivot-function
-    surface_IVKT_estim = surface_pkt_long.pivot(index='maturity', columns='strike')
-    surface_IVKT_estim.fillna(inplace=True, method='ffill')
-    print(surface_IVKT_estim)
-
-
-    surface_IVKT_estim = surface_IVKT_estim.iv
-    strikes = surface_IVKT_estim.keys()
-    maturities = surface_IVKT_estim.index
-
-    for t in maturities:
-        plt.plot(strikes, surface_IVKT_estim.loc[t])
-    plt.show()
-
-
+    plot_IVKT_3D(s_iv_estim)
 
