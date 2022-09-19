@@ -38,19 +38,19 @@ int main() {
   // First we create the parameter list
   // Note that you could easily modify this code to input the parameters
   // either from the command line or via a file
-  unsigned num_sims = 300000;   // Number of simulated asset paths
-  unsigned num_intervals = 4000;  // Number of intervals for the asset path to be sampled
+  unsigned num_sims = 100000;   // Number of simulated asset paths
+  unsigned num_intervals = 252;  // Number of intervals for the asset path to be sampled
 
-  double S_0 = 100.0;    // Initial spot price
-  double K = 100.0;      // Strike price
-  double r = 0.0319;     // Risk-free rate
+  double S_0 = 400.38;    // Initial spot price
+  double K = 400.38;      // Strike price
+  double r = 0.0329;     // Risk-free rate
   double v_0 = 0.010201; // Initial volatility
   double T = 1.00;       // One year until expiry
 
-  double rho = -0.7;     // Correlation of asset and volatility
-  double kappa = 6.21;   // Mean-reversion rate
-  double theta = 0.019;  // Long run average volatility
-  double xi = 0.61;      // "Vol of vol"
+  double rho = -0.52;     // Correlation of asset and volatility
+  double kappa = 1.65;   // Mean-reversion rate
+  double theta = 0.11;  // Long run average volatility
+  double xi = 1.00;      // "Vol of vol"
 
   // Create the PayOff, Option and Heston objects
   PayOff* pPayOffCall = new PayOffCall(K);
