@@ -18,7 +18,10 @@ def bsm_call_to_maturity(S0=50, K=50, r=0.05, sigma=0.3, T=0.5, N=100000):
     a = r - np.power(sigma,2)*T
     w1 = z*sigma*np.sqrt(T)
 
-    ks = np.exp(-r*T)*np.maximum(S0*np.exp(a + w1)-K, 0)
+    po1 = np.maximum(S0*np.exp(a + w1)-K, 0)
+    po2 = np.maximum(S0*np.exp(a - w1)-K, 0)
+
+    ks = np.exp(-r*T)*(po2 + po1)/2
     return np.mean(ks), np.std(ks)
 
 @njit()
