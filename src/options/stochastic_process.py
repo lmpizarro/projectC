@@ -124,15 +124,11 @@ def heston_mc(M):
     plt.show()
 
 def bsm_call_to_maturity(S0=50, K=50, r=0.05, sigma=0.3, T=0.5, N=1000):
-    S = np.zeros(N)
-    S[0] = S0
-    for i in range(1, N):
-        z = np.random.normal(0,1, N)
-        a = r - np.power(sigma,2)*T
-        w1 = z*sigma*np.sqrt(T)
-        S[i] = S0*np.exp(a + w1)
+    z = np.random.normal(0,1, N)
+    a = r - np.power(sigma,2)*T
+    w1 = z*sigma*np.sqrt(T)
 
-    ks = np.exp(-r*T)*np.maximum(S-K, 0)
+    ks = np.exp(-r*T)*np.maximum(S0*np.exp(a + w1)-K, 0)
     print("mean ", np.mean(ks), "sd ", np.std(ks))
 
 
