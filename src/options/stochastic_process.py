@@ -10,7 +10,7 @@ from numba import njit
 np.random.seed(0)
 
 @njit()
-def bsm_call_to_maturity(S0=50, K=50, r=0.05, sigma=0.3, T=0.5, N=100000):
+def bsm_call_to_maturity(S0=50, K=50, r=0.04, sigma=0.3, T=0.5, N=100000):
     """
         capitulo 21 Hull
     """
@@ -20,9 +20,19 @@ def bsm_call_to_maturity(S0=50, K=50, r=0.05, sigma=0.3, T=0.5, N=100000):
 
     po1 = np.maximum(S0*np.exp(a + w1)-K, 0)
     po2 = np.maximum(S0*np.exp(a - w1)-K, 0)
+    c = np.exp(-r*T)*(po2 + po1)/2
 
-    ks = np.exp(-r*T)*(po2 + po1)/2
-    return np.mean(ks), np.std(ks)
+    po1 = np.maximum(K-S0*np.exp(a + w1), 0)
+    po2 = np.maximum(K-S0*np.exp(a - w1), 0)
+    p = np.exp(-r*T)*(po2 + po1)/2
+
+
+    return np.mean(c), np.std(c), np.mean(p), np.std(p)
+
+def simul_bsm_mc():
+    cm, cs, pm, ps = bsm_call_to_maturity(N=100000)
+    print("mean call", cm, "std call", cs)
+    print("mean put", pm, "std put", ps)
 
 @njit()
 def gen_correlated(rho=-.9):
@@ -84,19 +94,23 @@ class HestonProcess:
         return vt1
 
 class Parameters:
-    kappa: float = .05
-    theta: float = .1
+    kappa: float = .02
+    theta: float = .15
     sigma: float = .1
     r:     float = .04
+    v0:    float = .1
+    s0:    float = 50
+    N:     int   = 252
+    T:     float = .5
 
 
 def heston_simulation():
     params = Parameters()
 
-    N = 252 
+    N = params.N 
     dt = 1 / N
-    s0 = 100
-    v0 = .1
+    s0 = params.s0
+    v0 = params.v0 
 
     qs = s0 * np.ones(N)
     vs = v0 * np.ones(N)
@@ -130,16 +144,23 @@ def heston_simulation():
 
 
 def heston_mc(M):
+    params = Parameters()
     qss = []
     for i in range(M):
         qss.append(heston_simulation())
 
-    for qs in qss:
-        plt.plot(qs)
-    plt.show()
+    price_to_maturity = np.zeros(M)
+    for i, qs in enumerate(qss):
+        price_to_maturity[i]= qs[-1]
+
+    po = np.maximum(price_to_maturity-params.s0, 0)
+    c = np.exp(-params.r*params.T)*po
+
+    print(np.mean(c))
 
 
 
 if __name__ == '__main__':
-    m, s = bsm_call_to_maturity(N=100000)
-    print("mean ", m, "std", s)
+    heston_mc(5000)
+    # simul_bsm_mc()
+
