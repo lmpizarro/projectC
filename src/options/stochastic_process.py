@@ -9,6 +9,17 @@ from numba import njit
 """
 np.random.seed(0)
 
+class Parameters:
+    kappa: float = .02
+    theta: float = .15
+    sigma: float = .1
+    r:     float = .04
+    v0:    float = .1
+    s0:    float = 50
+    N:     int   = 252
+    T:     float = .5
+
+
 @njit()
 def bsm_call_to_maturity(S0=50, K=50, r=0.04, sigma=0.3, T=0.5, N=100000):
     """
@@ -93,16 +104,6 @@ class HestonProcess:
 
         return vt1
 
-class Parameters:
-    kappa: float = .02
-    theta: float = .15
-    sigma: float = .1
-    r:     float = .04
-    v0:    float = .1
-    s0:    float = 50
-    N:     int   = 252
-    T:     float = .5
-
 
 def heston_simulation():
     params = Parameters()
@@ -129,10 +130,9 @@ def heston_simulation():
                                        zv=z1, 
                                        dt=dt)
 
-        s1 = HestonProcess.s_milstein_bsm(qs[i-1], 
+        s1 = HestonProcess.s_milstein(qs[i-1], 
                                        r=params.r, 
-                                       sigma=vs[i-1],
-                                       # vt=v,
+                                       vt=vs[i-1],
                                        dt=dt, 
                                        zs=zs)
 
@@ -145,13 +145,9 @@ def heston_simulation():
 
 def heston_mc(M):
     params = Parameters()
-    qss = []
-    for i in range(M):
-        qss.append(heston_simulation())
-
     price_to_maturity = np.zeros(M)
-    for i, qs in enumerate(qss):
-        price_to_maturity[i]= qs[-1]
+    for i in range(M):
+        price_to_maturity[i]= heston_simulation()[-1]
 
     po = np.maximum(price_to_maturity-params.s0, 0)
     c = np.exp(-params.r*params.T)*po
