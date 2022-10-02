@@ -10,6 +10,18 @@ from numba import njit
 np.random.seed(0)
 
 @njit()
+def bsm_call_to_maturity(S0=50, K=50, r=0.05, sigma=0.3, T=0.5, N=100000):
+    """
+        capitulo 21 Hull
+    """
+    z = np.random.normal(0,1, N)
+    a = r - np.power(sigma,2)*T
+    w1 = z*sigma*np.sqrt(T)
+
+    ks = np.exp(-r*T)*np.maximum(S0*np.exp(a + w1)-K, 0)
+    return np.mean(ks), np.std(ks)
+
+@njit()
 def gen_correlated(rho=-.9):
     z1 = np.random.normal(0, 1)
     z2 = np.random.normal(0, 1)
@@ -123,14 +135,8 @@ def heston_mc(M):
         plt.plot(qs)
     plt.show()
 
-def bsm_call_to_maturity(S0=50, K=50, r=0.05, sigma=0.3, T=0.5, N=1000):
-    z = np.random.normal(0,1, N)
-    a = r - np.power(sigma,2)*T
-    w1 = z*sigma*np.sqrt(T)
-
-    ks = np.exp(-r*T)*np.maximum(S0*np.exp(a + w1)-K, 0)
-    print("mean ", np.mean(ks), "sd ", np.std(ks))
 
 
 if __name__ == '__main__':
-    bsm_call_to_maturity(N=100000)
+    m, s = bsm_call_to_maturity(N=100000)
+    print("mean ", m, "std", s)
