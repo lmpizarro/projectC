@@ -11,28 +11,60 @@ https://www.codearmo.com/python-tutorial/Python-TVM
 https://bond-pricing.readthedocs.io/en/latest/
 internal rate of return bonds python package
 https://towardsdatascience.com/how-to-perform-bond-valuation-with-python-bbd0cf77417
-
 """
-def tir(value, cash_flows, deltatimes, steps=100000):
+
+def npv(df, ytm):
+    pv = 0
+    for index, row in df.iterrows():
+        pv +=  row['TOTAL']/np.power(1+ytm, row['T'])
+    return pv 
+
+def calc_ytm(df, value):
+    ytm0 = 0.00
+    ytmf = 1.000
+    ytms = np.linspace(ytm0, ytmf, 1000)
+    npvs = npv(df, ytms)
+    # calculate the difference array
+    difference_array = np.absolute(npvs - value)
+
+    index = difference_array.argmin()
+
+    return ytms[index]
+
+
+def ytm_continuous(value, cash_flows, deltatimes, steps=1000):
     
     rates = np.linspace(0.0001, 2., steps)
-    
-    for r in rates:
-        v = 0
-        for i, c in enumerate(cash_flows):
-            v += c*np.exp(-r*deltatimes[i])
-        if np.abs(v - value) < 1e-2:
+    npvs = np.zeros(rates.shape[0])
 
-            return (v,r)
+    def npv(r, cash, times):
+        v = 0
+        for i, c in enumerate(cash):
+            v += c*np.exp(-r*times[i])
+        return v
+
+    for i, r in enumerate(rates):
+        npvs[i] = npv(r, cash_flows, deltatimes)
+        
+    difference_array = np.absolute(npvs - value)
+
+    index = difference_array.argmin()
+
+    return rates[index]
+
+
     return (None, None)
 
 def test_tir():        
-    cash_f = [.03] * 9
-    cash_f.append(1.03)
+    cash_f = np.array([.03] * 9)
+    cash_f = np.append(cash_f, 1.03)
 
-    tms = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]
-    print(tir(.96, cash_f, tms))
+    tms = np.array([0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5])
+    print(ytm_continuous(.96, cash_f, tms))
 
+test_tir()
+
+exit()
 price = 23.90
 N_DAYS = 360
 ticker = 'AE38'
@@ -75,34 +107,6 @@ to_day = pd.Series(today)
 df['FECHA'] = pd.to_datetime(df['FECHA'])
 df['T'] = (df['FECHA'] - to_day)
 df['T'] = df['T'].dt.days.astype('int16') / N_DAYS
-
-def npv(df, ytm):
-    pv = 0
-    for index, row in df.iterrows():
-        pv +=  row['TOTAL']/np.power(1+ytm, row['T'])
-    return pv 
-
-def calc_ytm_(df, value):
-    ytm0 = 0.001
-    ytmf = 2.000
-    ytms = np.linspace(ytm0, ytmf, 100000)
-
-    for j,r in enumerate(ytms):
-        v = npv(df, r)
-        if np.abs(value -v ) < 1e-2:
-            return r
-
-def calc_ytm(df, value):
-    ytm0 = 0.00
-    ytmf = 1.000
-    ytms = np.linspace(ytm0, ytmf, 1000)
-    npvs = npv(df, ytms)
-    # calculate the difference array
-    difference_array = np.absolute(npvs - value)
-
-    index = difference_array.argmin()
-
-    return ytms[index]
 
 tir_ = calc_ytm(df, price)
 
