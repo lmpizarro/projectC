@@ -23,7 +23,8 @@ bonos = {
                                ],  "pay_per_year":2},
             }
 
-df_35 = pd.read_csv("flujoFondos_GD35.csv")
+
+df_35 = pd.read_csv("flujoFondos_GD46.csv")
 bono = {}
 pagos = []
 for row in df_35.iterrows():
@@ -37,7 +38,7 @@ bono["pay_per_year"] = 2
 ticker = row[1]['Ticker']
 
 bonos[ticker] = bono
-print(bonos.keys())
+
 class Bono(BaseModel):
     time_to_finish: float
 
