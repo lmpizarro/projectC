@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, date
 from pydantic import BaseModel
 import numpy as np
-
+import pandas as pd
 
 bonos = {
             "GD29": {"pagos": [('09/01/23', 0.5, 0), ('09/07/23', 0.5, 0), 
@@ -23,6 +23,21 @@ bonos = {
                                ],  "pay_per_year":2},
             }
 
+df_35 = pd.read_csv("flujoFondos_GD35.csv")
+bono = {}
+pagos = []
+for row in df_35.iterrows():
+    fecha = row[1]["Fecha de pago"].split('/')
+    fecha = '/'.join([fecha[2], fecha[1], fecha[0][2:]])
+    renta = row[1]["Renta"]
+    amort = row[1]["Amortización"]
+    pagos.append((fecha, renta, amort))
+bono['pagos'] = pagos
+bono["pay_per_year"] = 2
+ticker = row[1]['Ticker']
+
+bonos[ticker] = bono
+print(bonos.keys())
 class Bono(BaseModel):
     time_to_finish: float
 
@@ -55,7 +70,6 @@ def get_nominals(k):
 
         pairs_time_pagos.append((time_to_pago, r_mas_a))
 
-
     return total_amortizacion, total_renta, pairs_time_pagos
 
 def valor_bono_cont(pair_pagos, tasa):
@@ -64,10 +78,10 @@ def valor_bono_cont(pair_pagos, tasa):
         valor += e[1]*np.exp(-tasa*e[0])
     return valor
 
-def valor_bono_disc(pair_pagos, tasa):
+def valor_bono_disc(pair_pagos, tasa, pagos_p_a=2):
     valor = 0
     for e in pair_pagos:
-        v = e[1]/np.power(1+tasa/2, 2*e[0])
+        v = e[1]/np.power(1+tasa/pagos_p_a, pagos_p_a*e[0])
         # print(e, v)
         valor += v 
     return valor
@@ -92,15 +106,19 @@ rs = np.linspace(0.0001, 1.0, 100)
 vs = np.zeros(100)
 vs2 = np.zeros(100)
 
-for i, r in enumerate(rs):
-    vs[i] = valor_bono_disc(pair_pagos, r)
-    vs2[i] = valor_bono_cont(pair_pagos, r)
-
 import matplotlib.pyplot as plt
-plt.plot(rs, vs)
-plt.grid()
-plt.axhline(y=21)
-plt.axvline(x=renta_pct)
+
+for ticker in bonos:
+    amortizacion, renta, pair_pagos = get_nominals(ticker)
+    for i, r in enumerate(rs):
+        vs[i] = valor_bono_disc(pair_pagos, r)
+        vs2[i] = valor_bono_cont(pair_pagos, r)
+
+    plt.plot(rs, vs)
+    plt.grid()
+    plt.axhline(y=21)
+    plt.axvline(x=renta_pct)
+
 plt.show()
 
 plt.plot(np.diff(vs))
