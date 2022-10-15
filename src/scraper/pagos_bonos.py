@@ -48,7 +48,8 @@ def process_csv(nombre_bonos):
     with open('bonos.pkl', 'wb') as fp:
         pickle.dump(bonos, fp)
 
-def create_bullet_bond(face: float=100, years: float=10, pays_per_year: int=2, rate: float=.05, first_pay: str='09/01/23'):
+def create_bullet_bond(face: float=100, years: float=10, pays_per_year: int=2,
+                       rate: float=.05, first_pay: str='09/01/23'):
    
     pagos = []
     pay_date = datetime.strptime(first_pay, "%d/%m/%y").date()
@@ -84,11 +85,22 @@ import numpy as np
 bono = create_bullet_bond()
 
 # bono = bonos['GD29']
+def convert_bullet_to_amort(bono, periods=10):
+    for i in range(-1, -(periods+1), -1):
+        if i == -1:
+            amrt =  bono['pagos'][i][2] / periods
+            tuple__ = (bono['pagos'][i][0], bono['pagos'][i][1], amrt)
+            bono['pagos'][i] = tuple__
+            # amrt = 20 / 4
 
-print(bono)
+        tuple__ = (bono['pagos'][i][0], bono['pagos'][i][1], amrt)
+        bono['pagos'][i] = tuple__
+    return bono
+
+bono = convert_bullet_to_amort(bono)
 
 import matplotlib.pyplot as plt
-def calc_hist_price(bono, r=0.051, init_date=datetime(2022, 10, 20).date(), term='norm'):
+def calc_hist_price(bono, r=0.05, init_date=datetime(2022, 10, 20).date(), term='flat'):
     mem_pagos = []
 
     for pago in bono['pagos']:
