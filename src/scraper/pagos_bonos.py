@@ -1,7 +1,7 @@
 import pandas as pd
 from datetime import datetime, timedelta, date
 import pickle
-from scrap_bonos import N_DAYS
+from scrap_bonos import N_DAYS, ONE_BPS
 
 bonos = {
             "GD29": {"pagos": [('09/01/23', 0.5, 0), ('09/07/23', 0.5, 0), 
@@ -69,22 +69,6 @@ def create_bullet_bond(face: float=100, years: float=10, pays_per_year: int=2,
 
     return bono
 
-def dias_de_pago_mas_uno(bono, days=1):
-    pagos = bono['pagos']
-    
-    l_d_p = []
-    for pago in pagos:
-        dia_de_pago = datetime.strptime(pago[0], "%d/%m/%y").date()
-        mas_uno = dia_de_pago + timedelta(days=days)
-        l_d_p.append(mas_uno)
-    return l_d_p
-
-from soberanos import get_nominals, valor_bono_disc
-import numpy as np
-
-bono = create_bullet_bond()
-
-# bono = bonos['GD29']
 def convert_bullet_to_amort(bono, periods=10):
     for i in range(-1, -(periods+1), -1):
         if i == -1:
@@ -97,9 +81,25 @@ def convert_bullet_to_amort(bono, periods=10):
         bono['pagos'][i] = tuple__
     return bono
 
-bono = convert_bullet_to_amort(bono)
+def draw_cash_flow(bono):
+    cash_flow = [e[1] + e[2] for e in bono['pagos']]
+    plt.bar(list(range(1, len(cash_flow)+1)), cash_flow)
+    plt.show()
 
-import matplotlib.pyplot as plt
+
+def dias_de_pago_mas_uno(bono, days=1):
+    pagos = bono['pagos']
+    
+    l_d_p = []
+    for pago in pagos:
+        dia_de_pago = datetime.strptime(pago[0], "%d/%m/%y").date()
+        mas_uno = dia_de_pago + timedelta(days=days)
+        l_d_p.append(mas_uno)
+    return l_d_p
+
+def vol_model(t, tao, sigma=0.0005, alfa=0.1, beta=.5):
+    return np.random.normal(0, sigma*(1 - alfa*t/tao + beta))
+
 def calc_hist_price(bono, r=0.05, init_date=datetime(2022, 10, 20).date(), term='flat'):
     mem_pagos = []
 
@@ -118,29 +118,51 @@ def calc_hist_price(bono, r=0.05, init_date=datetime(2022, 10, 20).date(), term=
     plt.plot(curve)
     plt.show()
     valores = []
+    durations = []
     for i in range(total_dates):
         new_date = init_date + timedelta(days=i)
         valor_dia = 0
+        duration_dia = []
         for j, mp in enumerate(mem_pagos):
             if new_date < mp[0]:
                 ttm_dates = (mp[0] - new_date).days
-                r_curve = curve[ttm_dates-1] + np.random.normal(0, 0.0005)
+                alfa = 0.1
+                r_curve = curve[ttm_dates-1] + vol_model(ttm_dates, total_dates) 
                 ttm_years = ttm_dates/N_DAYS
                 valor = (mp[1]+ mp[2]) * np.exp(-r_curve*ttm_years)
+                duration = valor * ttm_years
             else:
                 valor = 0
+                duration = 0
+            duration_dia.append(duration)
             valor_dia += valor
         valores.append(valor_dia)
-    return valores
+        durations.append(np.asarray([duration_dia]).sum()/valor_dia)
+    return valores, durations
 
-val_per_dia = calc_hist_price(bono)
+
+from soberanos import get_nominals, valor_bono_disc
+import matplotlib.pyplot as plt
+import numpy as np
+
+bono = create_bullet_bond()
+
+# bono = bonos['GD29']
+draw_cash_flow(bono)
+
+bono = convert_bullet_to_amort(bono)
+draw_cash_flow(bono)
+
+val_per_dia, durations_dia = calc_hist_price(bono)
 plt.grid()
 plt.plot(val_per_dia)
 plt.axhline(94)
 plt.axhline(106)
 plt.show()
 
-exit()
+plt.plot(durations_dia)
+plt.show()
+
 
 today = date.today()
 amortizacion, renta, pair_pagos = get_nominals(bono, today)
@@ -159,7 +181,14 @@ modelPoly = Fit.polyModel(rs, vs)
 
 
 # 3 month minute
-print(3*30*24*60)
+total_hours = 3*30*24
+
+
+rss = ONE_BPS * np.sin(4*np.pi*np.linspace(0, total_hours, total_hours)/ total_hours) + .3
+plt.plot(rss)
+plt.show()
+plt.plot(Fit.monoExp(rss, m,t,b))
+plt.show()
 
 plt.plot(rs, vs)
 plt.plot(rs, Fit.monoExp(rs, m, t, b), 'k')
@@ -167,8 +196,8 @@ plt.plot(rs, modelPoly(rs), color='purple')
 plt.show()
 
 r1 = .2
-r2 =  r1 + 0.0001 
-Dr = r2 - r1
+Dr = ONE_BPS
+r2 =  r1 + Dr 
 dp1 = modelPoly(r2) -  modelPoly(r1)
 dpdr = dp1 / Dr
 dp2 = Fit.monoExp(r2, m, t, b) -  Fit.monoExp(r1, m, t, b)
@@ -185,9 +214,9 @@ for dte in l_d_p[:-1]:
     x.append(len(pair_pagos)) 
     for i, r in enumerate(rs):
         vs[i] = valor_bono_disc(pair_pagos, r)
+    Dr = ONE_BPS 
     r1 = .001
-    r2 =  r1 + 0.0001 
-    Dr = r2 - r1
+    r2 =  r1 + Dr 
     p1 = np.interp(r1, rs, vs)
     dp3 = np.interp(r2, rs, vs) - p1
     datapc.append((dp3/p1))

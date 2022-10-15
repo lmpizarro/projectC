@@ -9,6 +9,7 @@ from bonds import ytm_discrete, ytm_continuous, m_duration
 import json
 
 N_DAYS = 360
+ONE_BPS = 0.0001
 
 def scrap_bonos_rava():
     url = "https://www.rava.com/cotizaciones/bonos"
