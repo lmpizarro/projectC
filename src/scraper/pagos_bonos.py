@@ -88,14 +88,14 @@ print(bono)
 mem_pagos = []
 for pago in bono['pagos']:
     mem_pagos.append([datetime.strptime(pago[0], "%d/%m/%y").date(), pago[1], pago[2]])
-init_date = datetime(2023, 10, 20).date()
+init_date = datetime(2022, 10, 20).date()
 total_dates = (mem_pagos[-1][0]-init_date).days
 
 for i in range(total_dates):
     new_date = init_date + timedelta(days=i)
     for j, mp in enumerate(mem_pagos):
         if new_date < mp[0]:
-            print('..', j,  (mp[0] - new_date).days/365, mp[1])
+            print('..', j,  (mp[0] - new_date).days/365, mp[1], mp[0])
 
 exit()
 
