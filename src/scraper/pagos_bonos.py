@@ -47,19 +47,20 @@ def process_csv(nombre_bonos):
     with open('bonos.pkl', 'wb') as fp:
         pickle.dump(bonos, fp)
 
-def create_bullet_bond(face: float=100, years: float=10, pays_per_year: int=2, rate: float=1, first_pay: str='09/01/23'):
+def create_bullet_bond(face: float=100, years: float=10, pays_per_year: int=2, rate: float=.01, first_pay: str='09/01/23'):
    
     pagos = []
     pay_date = datetime.strptime(first_pay, "%d/%m/%y").date()
     for i in range(years-1):
         p_rate = rate / pays_per_year
+        pago = p_rate * face
         for j in range(pays_per_year):
-            pagos.append((pay_date.strftime("%d/%m/%y"), p_rate, 0))
+            pagos.append((pay_date.strftime("%d/%m/%y"), pago, 0))
             pay_date = pay_date + timedelta(days=180)
-    pagos.append((pay_date.strftime("%d/%m/%y"), p_rate, 0))
+    pagos.append((pay_date.strftime("%d/%m/%y"), pago, 0))
 
     pay_date = pay_date + timedelta(days=180)
-    pagos.append((pay_date.strftime("%d/%m/%y"), p_rate, 100))
+    pagos.append((pay_date.strftime("%d/%m/%y"), pago, 100))
     name = f'B{rate}-{str(pay_date.year)[2:]}'
     bono = {}
     bono['pagos'] = pagos
@@ -80,51 +81,63 @@ from soberanos import get_nominals, valor_bono_disc
 import numpy as np
 
 bono = create_bullet_bond()
+
 print(bono)
+
+
+mem_pagos = []
+for pago in bono['pagos']:
+    mem_pagos.append([datetime.strptime(pago[0], "%d/%m/%y").date(), pago[1], pago[2]])
+init_date = datetime(2023, 10, 20).date()
+total_dates = (mem_pagos[-1][0]-init_date).days
+
+for i in range(total_dates):
+    new_date = init_date + timedelta(days=i)
+    for j, mp in enumerate(mem_pagos):
+        if new_date < mp[0]:
+            print('..', j,  (mp[0] - new_date).days/365, mp[1])
+
+exit()
+
 today = date.today()
 amortizacion, renta, pair_pagos = get_nominals(bono, today)
 
 import matplotlib.pyplot as plt
-import scipy.optimize
-
-
-def monoExp(x, m, t, b):
-    return m * np.exp(-t * x) + b
-
+from fitter import Fit
 
 rs = np.linspace(0.0001, 1.0001, 100)
 vs = np.zeros(100)
 for i, r in enumerate(rs):
     vs[i] = valor_bono_disc(pair_pagos, r)
 
-# perform the fit
 p0 = (vs[0], 5, 10) # start with values near those we expect
-params, cv = scipy.optimize.curve_fit(monoExp, rs, vs, p0)
-m, t, b = params
-print(params)
+m, t, b = Fit.optimizeExp(rs, vs, p0)
 
-model3 = np.poly1d(np.polyfit(rs, vs, 8))
+modelPoly = Fit.polyModel(rs, vs)
 
+
+# 3 month minute
+print(3*30*24*60)
 
 plt.plot(rs, vs)
-plt.plot(rs, monoExp(rs, m, t, b), 'k')
-plt.plot(rs, model3(rs), color='purple')
+plt.plot(rs, Fit.monoExp(rs, m, t, b), 'k')
+plt.plot(rs, modelPoly(rs), color='purple')
 plt.show()
 
 r1 = .2
 r2 =  r1 + 0.0001 
 Dr = r2 - r1
-dp1 = model3(r2) -  model3(r1)
+dp1 = modelPoly(r2) -  modelPoly(r1)
 dpdr = dp1 / Dr
-dp2 = monoExp(r2, m, t, b) -  monoExp(r1, m, t, b)
+dp2 = Fit.monoExp(r2, m, t, b) -  Fit.monoExp(r1, m, t, b)
 dp3 = np.interp(r2, rs, vs) - np.interp(r1, rs, vs)
 print(dpdr, dp2/Dr, dp3/Dr)
 
-l_d_p = dias_de_pago_mas_uno(bono)
 
 plt.grid()
 datapc = []
 x = []
+l_d_p = dias_de_pago_mas_uno(bono)
 for dte in l_d_p[:-1]:
     amortizacion, renta, pair_pagos = get_nominals(bono, dte)
     x.append(len(pair_pagos)) 
