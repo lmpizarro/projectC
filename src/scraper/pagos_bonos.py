@@ -1,6 +1,7 @@
 import pandas as pd
 from datetime import datetime, timedelta, date
 import pickle
+from scrap_bonos import N_DAYS
 
 bonos = {
             "GD29": {"pagos": [('09/01/23', 0.5, 0), ('09/07/23', 0.5, 0), 
@@ -47,7 +48,7 @@ def process_csv(nombre_bonos):
     with open('bonos.pkl', 'wb') as fp:
         pickle.dump(bonos, fp)
 
-def create_bullet_bond(face: float=100, years: float=10, pays_per_year: int=2, rate: float=.01, first_pay: str='09/01/23'):
+def create_bullet_bond(face: float=100, years: float=10, pays_per_year: int=2, rate: float=.05, first_pay: str='09/01/23'):
    
     pagos = []
     pay_date = datetime.strptime(first_pay, "%d/%m/%y").date()
@@ -82,27 +83,56 @@ import numpy as np
 
 bono = create_bullet_bond()
 
+# bono = bonos['GD29']
+
 print(bono)
 
+import matplotlib.pyplot as plt
+def calc_hist_price(bono, r=0.051, init_date=datetime(2022, 10, 20).date(), term='norm'):
+    mem_pagos = []
 
-mem_pagos = []
-for pago in bono['pagos']:
-    mem_pagos.append([datetime.strptime(pago[0], "%d/%m/%y").date(), pago[1], pago[2]])
-init_date = datetime(2022, 10, 20).date()
-total_dates = (mem_pagos[-1][0]-init_date).days
+    for pago in bono['pagos']:
+        mem_pagos.append([datetime.strptime(pago[0], "%d/%m/%y").date(), pago[1], pago[2]])
+    total_dates = (mem_pagos[-1][0]-init_date).days
+    dates_index = np.asarray(list(range(total_dates)))
 
-for i in range(total_dates):
-    new_date = init_date + timedelta(days=i)
-    for j, mp in enumerate(mem_pagos):
-        if new_date < mp[0]:
-            print('..', j,  (mp[0] - new_date).days/365, mp[1], mp[0])
+    if term == 'flat':
+        curve = r * np.ones(dates_index.shape[0]) 
+    elif term == 'inv':
+        curve = r * (np.exp(-dates_index/(2*N_DAYS)))
+    else:
+        curve = r * (1 - np.exp(-dates_index/(2*N_DAYS)))
+
+    plt.plot(curve)
+    plt.show()
+    valores = []
+    for i in range(total_dates):
+        new_date = init_date + timedelta(days=i)
+        valor_dia = 0
+        for j, mp in enumerate(mem_pagos):
+            if new_date < mp[0]:
+                ttm_dates = (mp[0] - new_date).days
+                r_curve = curve[ttm_dates-1] + np.random.normal(0, 0.0005)
+                ttm_years = ttm_dates/N_DAYS
+                valor = (mp[1]+ mp[2]) * np.exp(-r_curve*ttm_years)
+            else:
+                valor = 0
+            valor_dia += valor
+        valores.append(valor_dia)
+    return valores
+
+val_per_dia = calc_hist_price(bono)
+plt.grid()
+plt.plot(val_per_dia)
+plt.axhline(94)
+plt.axhline(106)
+plt.show()
 
 exit()
 
 today = date.today()
 amortizacion, renta, pair_pagos = get_nominals(bono, today)
 
-import matplotlib.pyplot as plt
 from fitter import Fit
 
 rs = np.linspace(0.0001, 1.0001, 100)

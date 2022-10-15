@@ -3,7 +3,7 @@ from pydantic import BaseModel
 import numpy as np
 import pandas as pd
 import pickle
-
+from scrap_bonos import N_DAYS
 
 with open('bonos.pkl', 'rb') as fp:
     bonos = pickle.load(fp)
@@ -16,7 +16,7 @@ class Bono(BaseModel):
 def delta_time_years(date2: str, date1):
     end_date = datetime.strptime(date2, "%d/%m/%y").date()
     time_to_finish = end_date - date1
-    time_to_finish = time_to_finish.total_seconds()/(3600*24*365)
+    time_to_finish = time_to_finish.total_seconds()/(3600*24*N_DAYS)
 
     return time_to_finish
 

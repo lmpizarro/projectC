@@ -32,9 +32,6 @@ def scrap_bonos_rava():
     return symbols
 
 
-
-
-
 def scrap_cash_flows(ticker):
     url = f"https://bonistas.com/md/{ticker}"
 
@@ -77,23 +74,24 @@ def scrap_cash_flows(ticker):
 
     return df
 
-tickers = ['AL29D', 'AL30D', 'AE38D', 'AL41D', 'AL35D', 'GD29D', 'GD30D', 'GD46D', 'GD38D', 'GD35D']
+if __name__ == '__main__':
+    tickers = ['AL29D', 'AL30D', 'AE38D', 'AL41D', 'AL35D', 'GD29D', 'GD30D', 'GD46D', 'GD38D', 'GD35D']
 
-print('tkr', '  precio', '  tir', '  m_dur', '  cash', '  amort', '  cupon')
-for ticker in tickers:
-    close_day = scrap_bonos_rava()
-    price = float(close_day[ticker]['ultimo'])
+    print('tkr', '  precio', '  tir', '  m_dur', '  cash', '  amort', '  cupon')
+    for ticker in tickers:
+        close_day = scrap_bonos_rava()
+        price = float(close_day[ticker]['ultimo'])
 
 
-    df = scrap_cash_flows(ticker)
-    tir_ = ytm_discrete(df, price)
+        df = scrap_cash_flows(ticker)
+        tir_ = ytm_discrete(df, price)
 
-    total_amort = df['AMORTIZACIÓN'].sum()
-    total_cupo = df['CUPÓN'].sum()
+        total_amort = df['AMORTIZACIÓN'].sum()
+        total_cupo = df['CUPÓN'].sum()
 
-    total = total_amort + total_cupo
+        total = total_amort + total_cupo
 
-    duration = m_duration(df, tir_)
-    print(f'{ticker},  {round(price,2)},  {round(tir_, 2)},  {round(duration, 2)},  ' 
-          f'{round(total,2)},  {round(total_amort,2)},  {round(total_cupo,2)}')
+        duration = m_duration(df, tir_)
+        print(f'{ticker},  {round(price,2)},  {round(tir_, 2)},  {round(duration, 2)},  ' 
+              f'{round(total,2)},  {round(total_amort,2)},  {round(total_cupo,2)}')
     
