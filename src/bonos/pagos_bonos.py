@@ -77,7 +77,7 @@ def create_bullet_bond(face: float=100, years: float=10, pays_per_year: int=2,
 def convert_bullet_to_amort(bono, periods=10):
     for i in range(-1, -(periods+1), -1):
         if i == -1:
-            amrt =  bono['pagos'][i][2] / periods
+            amrt =  -bono['pagos'][i][1] + bono['pagos'][i][2] / periods
             tuple__ = (bono['pagos'][i][0], bono['pagos'][i][1], amrt)
             bono['pagos'][i] = tuple__
             # amrt = 20 / 4
@@ -139,8 +139,9 @@ def calc_hist_price(bono, r=0.05, init_date=datetime(2022, 10, 20).date(), term=
                 alfa = 0.1
                 r_curve = curve[ttm_dates-1] + volatility_model(ttm_dates, total_dates)
                 ttm_years = ttm_dates/N_DAYS
-                valor = (mp[1]+ mp[2]) * np.exp(-r_curve*ttm_years)
-                duration = valor * ttm_years
+                valor = mp[1]+ mp[2]
+                valor_ajustado = valor * np.exp(-r_curve*ttm_years)
+                duration = valor_ajustado * ttm_years
             else:
                 valor = 0
                 duration = 0
@@ -239,13 +240,14 @@ def test_others():
 def calc_hist_reinv(bono, r=0.05, init_date=datetime(2022, 10, 20).date(), term='flat', cantidad=1000):
     mem_pagos = []
 
+    face_value = 100
     for i, pago in enumerate(bono['pagos']):
         amortizacion = cantidad * pago[2]
         renta = cantidad * pago[1]
         mem_pagos.append([datetime.strptime(pago[0], "%d/%m/%y").date(), renta, amortizacion])
         a_comprar = 0
         if i < len(bono['pagos']) - 1:
-            a_comprar = int((renta + amortizacion) / 100)
+            a_comprar = int((renta + amortizacion) / face_value)
 
         print(a_comprar, cantidad)
         cantidad = cantidad + a_comprar
@@ -253,10 +255,16 @@ def calc_hist_reinv(bono, r=0.05, init_date=datetime(2022, 10, 20).date(), term=
 
     print(mem_pagos)
 
+    cash_flow = [(e[1] + e[2])/100 for e in mem_pagos]
+    plt.bar(list(range(1, len(cash_flow)+1)), cash_flow)
+    plt.show()
+
+
 
 def main():
     bono = create_bullet_bond(years=4)
-    calc_hist_reinv(bono)
+    # calc_hist_reinv(bono)
+    test_calc_prices()
 
 if __name__ == '__main__':
     main()
