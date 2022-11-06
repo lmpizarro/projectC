@@ -12,6 +12,7 @@ def create_bullet_bond(face: float=100, years: float=10, pays_per_year: int=2,
 
     pagos = []
     pay_date = datetime.strptime(first_pay, "%d/%m/%y").date()
+
     p_rate = rate / pays_per_year
     for i in range(years-1):
         pago = p_rate * face
@@ -29,17 +30,18 @@ def create_bullet_bond(face: float=100, years: float=10, pays_per_year: int=2,
     return bono
 
 
-def create_bono_amortizacion(years=5, pays_per_year=2, rate: float=.04, first_pay: str='09/01/23', inicia_amort: int=7):
+def create_amortizable_bond(years=5, pays_per_year=2, rate: float=.04, first_pay: str='09/01/23', n_amort: int=8, amortizacion=10):
     periods = pays_per_year * 2
 
     p_rate = rate / pays_per_year
 
+    inicia_amort = years * pays_per_year - n_amort + 1
     coef_desc = np.power((1+rate/pays_per_year), -(np.arange(pays_per_year * years) + 1))
 
-    pago_tasa = 100*p_rate * np.ones(pays_per_year * years) 
+    pago_tasa = 100 * p_rate * np.ones(pays_per_year * years) 
     pago_amortizacion_zeros = np.zeros(inicia_amort - 1)
 
-    amortizacion = 100 / (pays_per_year * years - inicia_amort + 2)
+    # amortizacion = 100 / (pays_per_year * years - inicia_amort + 2)
     pago_amortizacion = amortizacion * np.ones(pays_per_year * years - inicia_amort + 1)
 
     print(pago_tasa.shape, pago_amortizacion_zeros.shape, pago_amortizacion.shape)
@@ -52,8 +54,18 @@ def create_bono_amortizacion(years=5, pays_per_year=2, rate: float=.04, first_pa
    
     resto_100 = 100 - (sum_menos_uno_amortizacion + sum_tasa_total)
     pago_amortizacion[-1] = (resto_100 / coef_desc[-1]).round(2)
-    print(pago_amortizacion)
-    print(pago_tasa)
+    print((coef_desc * (pago_tasa + pago_amortizacion)).sum())
+
+    pagos = []
+    pay_date = datetime.strptime(first_pay, "%d/%m/%y").date()
+    k = 0
+    for i in range(years):
+        for j in range(pays_per_year):
+            pagos.append((pay_date.strftime("%d/%m/%y"), pago_tasa[k], pago_amortizacion[k]))
+            pay_date = pay_date + timedelta(days=180)
+            k += 1
+ 
+    print(pagos)
 
 def draw_cash_flow(bono):
     cash_flow = [e[1] + e[2] for e in bono['pagos']]
@@ -233,7 +245,7 @@ def main():
     # calc_hist_reinv(bono)
     # test_others()
     # test_calc_prices()
-    create_bono_amortizacion()
+    create_amortizable_bond()
 
 if __name__ == '__main__':
     main()
