@@ -30,7 +30,7 @@ def create_bullet_bond(face: float=100, years: float=10, pays_per_year: int=2,
     return bono
 
 
-def create_amortizable_bond(years=5, pays_per_year=2, rate: float=.04, first_pay: str='09/01/23', n_amort: int=8, amortizacion=10):
+def create_amortizable_bond(years=5, pays_per_year=2, rate: float=.05, first_pay: str='09/01/23', n_amort: int=3, amortizacion=20):
     periods = pays_per_year * 2
 
     p_rate = rate / pays_per_year
@@ -65,7 +65,10 @@ def create_amortizable_bond(years=5, pays_per_year=2, rate: float=.04, first_pay
             pay_date = pay_date + timedelta(days=180)
             k += 1
  
-    print(pagos)
+    bono = {}
+    bono['pagos'] = pagos
+
+    return bono
 
 def draw_cash_flow(bono):
     cash_flow = [e[1] + e[2] for e in bono['pagos']]
@@ -73,7 +76,7 @@ def draw_cash_flow(bono):
     plt.show()
 
 
-def dias_de_pago_mas_uno(bono, days=1):
+def dia_de_pago_mas_uno(bono, days=1):
     pagos = bono['pagos']
 
     l_d_p = []
@@ -86,18 +89,18 @@ def dias_de_pago_mas_uno(bono, days=1):
 def volatility_model(t, tao, sigma=0.0005, alfa=0.1, beta=.5):
     return np.random.normal(0, sigma*(1 - alfa*t/tao + beta))
 
-def define_term_curve(r, total_dates, term='flat'):
+def define_term_curve(r, total_dates, s=.01, term='flat'):
     dates_index = np.asarray(list(range(total_dates)))
     if term == 'flat':
         curve = r * np.ones(dates_index.shape[0])
     elif term == 'inv':
-        curve = r * (np.exp(-dates_index/(2*_DAYS_IN_A_YEARN)))
+        curve = r * (np.exp(-s*dates_index/(2*DAYS_IN_A_YEAR)))
     else:
-        curve = r * (1 - np.exp(-dates_index/(2*DAYS_IN_A_YEAR)))
+        curve = r * (1 - np.exp(-s*dates_index/(2*DAYS_IN_A_YEAR)))
     return curve
 
 
-def calc_hist_price(bono, r=0.05, init_date=datetime(2022, 10, 20).date(), term='flat'):
+def calc_hist_price(bono, r=0.05, init_date=datetime(2022, 9, 20).date(), term='flat'):
     mem_pagos = []
 
     for pago in bono['pagos']:
@@ -106,34 +109,52 @@ def calc_hist_price(bono, r=0.05, init_date=datetime(2022, 10, 20).date(), term=
         mem_pagos.append([datetime.strptime(pago[0], "%d/%m/%y").date(), renta, amortizacion])
     total_dates = (mem_pagos[-1][0]-init_date).days
 
-    curve = define_term_curve(r, total_dates)
+    curve = define_term_curve(r, total_dates, 'nv')
 
+    plt.plot(range(total_dates), curve)
+    plt.show()
     valores = []
     durations = []
-    for i in range(total_dates):
+    for i in range(total_dates + 1):
         new_date = init_date + timedelta(days=i)
         valor_dia = 0
         duration_dia = []
+        cupon = False
         for j, mp in enumerate(mem_pagos):
+
             if new_date < mp[0]:
                 ttm_dates = (mp[0] - new_date).days
                 r_curve = curve[ttm_dates-1] + volatility_model(ttm_dates, total_dates)
                 ttm_years = ttm_dates/DAYS_IN_A_YEAR
-                print(ttm_years)
                 valor = mp[1]+ mp[2]
                 valor_ajustado = valor * np.exp(-r_curve*ttm_years)
                 duration = valor_ajustado * ttm_years
+
             else:
                 valor_ajustado = 0
                 duration = 0
+
             duration_dia.append(duration)
             valor_dia += valor_ajustado
-        valores.append(valor_dia)
-        durations.append(np.asarray([duration_dia]).sum()/valor_dia)
+            if new_date == mp[0]:
+                cobro = mp[1] + mp[2]
+                cupon = True
+
+        if valor_dia != 0:
+            valores.append(valor_dia)
+            durations.append(np.asarray([duration_dia]).sum()/valor_dia)
+            if cupon:
+                cupon = False
+                incremento = 1 + cobro / valor_dia 
+                print('valor_dia ', cobro, valor_dia, incremento)
+                mem_pagos = [[e[0], incremento * e[1], incremento * e[2]] for e in mem_pagos]
+
+
     return valores, durations
 
 def test_calc_prices():
     bono = create_bullet_bond(years=4)
+    #bono = create_amortizable_bond()
 
     # bono = bonos['GD29']
     draw_cash_flow(bono)
@@ -197,7 +218,7 @@ def test_others():
     plt.grid()
     datapc = []
     x = []
-    l_d_p = dias_de_pago_mas_uno(bono)
+    l_d_p = dia_de_pago_mas_uno(bono)
     for dte in l_d_p[:-1]:
         amortizacion, renta, pair_pagos = get_nominals(bono, dte)
         x.append(len(pair_pagos))
@@ -244,8 +265,7 @@ def main():
     bono = create_bullet_bond(years=4)
     # calc_hist_reinv(bono)
     # test_others()
-    # test_calc_prices()
-    create_amortizable_bond()
+    test_calc_prices()
 
 if __name__ == '__main__':
     main()
