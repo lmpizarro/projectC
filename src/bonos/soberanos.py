@@ -3,12 +3,8 @@ from pydantic import BaseModel
 import numpy as np
 import pandas as pd
 import pickle
-from scrap_bonos import N_DAYS
+from scrap_bonos import DAYS_IN_A_YEAR
 
-with open('bonos.pkl', 'rb') as fp:
-    bonos = pickle.load(fp)
-
-print(bonos.keys())
 
 class Bono(BaseModel):
     time_to_finish: float
@@ -16,7 +12,7 @@ class Bono(BaseModel):
 def delta_time_years(date2: str, date1):
     end_date = datetime.strptime(date2, "%d/%m/%y").date()
     time_to_finish = end_date - date1
-    time_to_finish = time_to_finish.total_seconds()/(3600*24*N_DAYS)
+    time_to_finish = time_to_finish.total_seconds()/(3600*24*DAYS_IN_A_YEAR)
 
     return time_to_finish
 
@@ -61,6 +57,10 @@ def valor_bono_disc(pair_pagos, tasa, pagos_p_a=2):
     return valor
 
 if __name__ == '__main__':
+
+    with open('bonos.pkl', 'rb') as fp:
+        bonos = pickle.load(fp)
+
     for k in bonos:
 
        today = date.today()

@@ -1,4 +1,5 @@
 import requests
+import pickle
 from bs4 import BeautifulSoup
 import pandas as pd
 from io import StringIO
@@ -8,8 +9,56 @@ from datetime import date
 from bonds import ytm_discrete, ytm_continuous, m_duration
 import json
 
-N_DAYS = 360
+DAYS_IN_A_YEAR = 360
 ONE_BPS = 0.0001
+
+bonos = {
+            "GD29": {"pagos": [('09/01/23', 0.5, 0), ('09/07/23', 0.5, 0),
+                               ('09/01/24', 0.5, 0), ('09/07/24', 0.5, 0),
+                               ('09/01/25', 0.5, 10), ('09/07/25', 0.45, 10),
+                               ('09/01/26', 0.4, 10), ('09/07/26', 0.35, 10),
+                               ('09/01/27', 0.3, 10), ('09/07/27', 0.25, 10),
+                               ('09/01/28', 0.2, 10), ('09/07/28', 0.15, 10),
+                               ('09/01/29', 0.1, 10), ('09/07/29', 0.05, 10),
+                               ], "pay_per_year":2},
+            "GD30": {"pagos": [('09/01/23', 0.25, 0), ('09/07/23', 0.25, 0),
+                               ('09/01/24', 0.38, 0), ('09/07/24', 0.38, 4),
+                               ('09/01/25', 0.36, 8), ('09/07/25', 0.33, 8),
+                               ('09/01/26', 0.3, 8), ('09/07/26', 0.27, 8),
+                               ('09/01/27', 0.24, 8), ('09/07/27', 0.21, 8),
+                               ('09/01/28', 0.42, 8), ('09/07/28', 0.35, 8),
+                               ('09/01/29', 0.28, 8), ('09/07/29', 0.21, 8),
+                               ('09/01/30', 0.14, 8), ('09/07/30', 0.07, 8),
+                               ],  "pay_per_year":2},
+            }
+
+
+nombre_bonos = {'GD' :[35,38,41,46]}
+
+def process_csv(nombre_bonos):
+    for tipo in nombre_bonos:
+        for anio in nombre_bonos[tipo]:
+            df_35 = pd.read_csv(f"flujoFondos_{tipo}{anio}.csv")
+
+            bono = {}
+            pagos = []
+            for row in df_35.iterrows():
+                fecha = row[1]["Fecha de pago"].split('/')
+                fecha = '/'.join([fecha[2], fecha[1], fecha[0][2:]])
+                renta = row[1]["Renta"]
+                amort = row[1]["Amortización"]
+                pagos.append((fecha, renta, amort))
+            bono['pagos'] = pagos
+            bono["pay_per_year"] = 2
+            ticker = row[1]['Ticker']
+
+            bonos[ticker] = bono
+
+    with open('bonos.pkl', 'wb') as fp:
+        pickle.dump(bonos, fp)
+
+
+
 
 def scrap_bonos_rava():
     url = "https://www.rava.com/cotizaciones/bonos"
@@ -71,7 +120,7 @@ def scrap_cash_flows(ticker):
     to_day = pd.Series(today)
     df['FECHA'] = pd.to_datetime(df['FECHA'])
     df['T'] = (df['FECHA'] - to_day)
-    df['T'] = df['T'].dt.days.astype('int16') / N_DAYS
+    df['T'] = df['T'].dt.days.astype('int16') / DAYS_IN_A_YEAR
 
     return df
 
