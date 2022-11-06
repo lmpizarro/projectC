@@ -12,8 +12,8 @@ def create_bullet_bond(face: float=100, years: float=10, pays_per_year: int=2,
 
     pagos = []
     pay_date = datetime.strptime(first_pay, "%d/%m/%y").date()
+    p_rate = rate / pays_per_year
     for i in range(years-1):
-        p_rate = rate / pays_per_year
         pago = p_rate * face
         for j in range(pays_per_year):
             pagos.append((pay_date.strftime("%d/%m/%y"), pago, 0))
@@ -28,17 +28,32 @@ def create_bullet_bond(face: float=100, years: float=10, pays_per_year: int=2,
 
     return bono
 
-def convert_bullet_to_amort(bono, periods=10):
-    for i in range(-1, -(periods+1), -1):
-        if i == -1:
-            amrt =  -bono['pagos'][i][1] + bono['pagos'][i][2] / periods
-            tuple__ = (bono['pagos'][i][0], bono['pagos'][i][1], amrt)
-            bono['pagos'][i] = tuple__
-            # amrt = 20 / 4
 
-        tuple__ = (bono['pagos'][i][0], bono['pagos'][i][1], amrt)
-        bono['pagos'][i] = tuple__
-    return bono
+def create_bono_amortizacion(years=5, pays_per_year=2, rate: float=.04, first_pay: str='09/01/23', inicia_amort: int=7):
+    periods = pays_per_year * 2
+
+    p_rate = rate / pays_per_year
+
+    coef_desc = np.power((1+rate/pays_per_year), -(np.arange(pays_per_year * years) + 1))
+
+    pago_tasa = 100*p_rate * np.ones(pays_per_year * years) 
+    pago_amortizacion_zeros = np.zeros(inicia_amort - 1)
+
+    amortizacion = 100 / (pays_per_year * years - inicia_amort + 2)
+    pago_amortizacion = amortizacion * np.ones(pays_per_year * years - inicia_amort + 1)
+
+    print(pago_tasa.shape, pago_amortizacion_zeros.shape, pago_amortizacion.shape)
+    pago_amortizacion = np.concatenate([pago_amortizacion_zeros, pago_amortizacion])
+    pago_total = pago_tasa + pago_amortizacion
+    print(pago_tasa, pago_total, pago_amortizacion, pago_total.sum())
+  
+    sum_menos_uno_amortizacion = (coef_desc * pago_amortizacion)[:-1].sum()
+    sum_tasa_total = (coef_desc * pago_tasa).sum()
+   
+    resto_100 = 100 - (sum_menos_uno_amortizacion + sum_tasa_total)
+    pago_amortizacion[-1] = (resto_100 / coef_desc[-1]).round(2)
+    print(pago_amortizacion)
+    print(pago_tasa)
 
 def draw_cash_flow(bono):
     cash_flow = [e[1] + e[2] for e in bono['pagos']]
@@ -111,7 +126,6 @@ def test_calc_prices():
     # bono = bonos['GD29']
     draw_cash_flow(bono)
 
-    # bono = convert_bullet_to_amort(bono)
     # draw_cash_flow(bono)
 
     val_per_dia, durations_dia = calc_hist_price(bono)
@@ -218,7 +232,8 @@ def main():
     bono = create_bullet_bond(years=4)
     # calc_hist_reinv(bono)
     # test_others()
-    test_calc_prices()
+    # test_calc_prices()
+    create_bono_amortizacion()
 
 if __name__ == '__main__':
     main()
