@@ -5,7 +5,11 @@ from scrap_bonos import DAYS_IN_A_YEAR, ONE_BPS
 from soberanos import get_nominals, valor_bono_disc
 import matplotlib.pyplot as plt
 import numpy as np
+from nelson_siegel_svensson.calibrate import calibrate_ns_ols
 
+t = np.asarray([0.0,   0.5, 1.0,   2.0,   3.0,   4.0,   5.0, 10.0, 15.0, 20.0, 25.0, 30.0])
+y = np.asarray([0.01, 0.02, 0.03, 0.035, 0.03, 0.035, 0.040, 0.05, 0.035, 0.037, 0.038, 0.04])
+nsv_curve, status = calibrate_ns_ols(t, y, tau0=1.0)  # starting value of 1.0 for the optimization of tau
 
 def create_bullet_bond(face: float=100, years: float=10, pays_per_year: int=2,
                        rate: float=.05, first_pay: str='09/01/23'):
@@ -89,20 +93,22 @@ def dia_de_pago_mas_uno(bono, days=1):
 def volatility_model(t, tao, sigma=0.0005, alfa=0.1, beta=.5):
     return np.random.normal(0, sigma*(1 - alfa*t/tao + beta))
 
-def define_term_curve(r, total_dates, s=1, term='flat'):
-    dates_index = np.asarray(list(range(total_dates)))
+def define_term_curve(r, total_dates, s=10, term='flat'):
+    dates_index = np.asarray(list(range(total_dates))) / DAYS_IN_A_YEAR
     if term == 'flat':
         print('FLAT')
         curve = r * np.ones(dates_index.shape[0])
-    elif term == 'inv':
+    elif term == 'exp_inv':
         print('INV')
-        curve = r * (np.exp(-s*dates_index/(2*DAYS_IN_A_YEAR)))
+        curve = r * (np.exp(-s*dates_index))
+    elif term == 'exp':
+        curve = r * (1 - np.exp(-s*dates_index))
     else:
-        curve = r * (1 - np.exp(-s*dates_index/(2*DAYS_IN_A_YEAR)))
+        curve = nsv_curve(dates_index)
     return curve
 
 
-def calc_hist_price(bono, r=0.05, init_date=datetime(2022, 9, 20).date(), term='inv'):
+def calc_hist_price(bono, r=0.05, init_date=datetime(2022, 9, 20).date(), term='lat'):
     mem_pagos = []
 
     for pago in bono['pagos']:
@@ -156,7 +162,7 @@ def calc_hist_price(bono, r=0.05, init_date=datetime(2022, 9, 20).date(), term='
 
 def test_calc_prices():
     bono = create_bullet_bond(years=4)
-    #bono = create_amortizable_bond()
+    bono = create_amortizable_bond()
 
     # bono = bonos['GD29']
     draw_cash_flow(bono)
@@ -239,33 +245,9 @@ def test_others():
     plt.plot(x, datapc)
     plt.show()
 
-def calc_hist_reinv(bono, r=0.05, init_date=datetime(2022, 10, 20).date(), term='flat', cantidad=1000):
-    mem_pagos = []
-
-    face_value = 100
-    for i, pago in enumerate(bono['pagos']):
-        amortizacion = cantidad * pago[2]
-        renta = cantidad * pago[1]
-        mem_pagos.append([datetime.strptime(pago[0], "%d/%m/%y").date(), renta, amortizacion])
-        a_comprar = 0
-        if i < len(bono['pagos']) - 1:
-            a_comprar = int((renta + amortizacion) / face_value)
-
-        print(a_comprar, cantidad)
-        cantidad = cantidad + a_comprar
-    total_dates = (mem_pagos[-1][0]-init_date).days
-
-    print(mem_pagos)
-
-    cash_flow = [(e[1] + e[2])/100 for e in mem_pagos]
-    plt.bar(list(range(1, len(cash_flow)+1)), cash_flow)
-    plt.show()
-
-
 
 def main():
     bono = create_bullet_bond(years=4)
-    # calc_hist_reinv(bono)
     # test_others()
     test_calc_prices()
 
