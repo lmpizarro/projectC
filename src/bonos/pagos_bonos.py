@@ -89,18 +89,20 @@ def dia_de_pago_mas_uno(bono, days=1):
 def volatility_model(t, tao, sigma=0.0005, alfa=0.1, beta=.5):
     return np.random.normal(0, sigma*(1 - alfa*t/tao + beta))
 
-def define_term_curve(r, total_dates, s=.01, term='flat'):
+def define_term_curve(r, total_dates, s=1, term='flat'):
     dates_index = np.asarray(list(range(total_dates)))
     if term == 'flat':
+        print('FLAT')
         curve = r * np.ones(dates_index.shape[0])
     elif term == 'inv':
+        print('INV')
         curve = r * (np.exp(-s*dates_index/(2*DAYS_IN_A_YEAR)))
     else:
         curve = r * (1 - np.exp(-s*dates_index/(2*DAYS_IN_A_YEAR)))
     return curve
 
 
-def calc_hist_price(bono, r=0.05, init_date=datetime(2022, 9, 20).date(), term='flat'):
+def calc_hist_price(bono, r=0.05, init_date=datetime(2022, 9, 20).date(), term='inv'):
     mem_pagos = []
 
     for pago in bono['pagos']:
@@ -109,7 +111,7 @@ def calc_hist_price(bono, r=0.05, init_date=datetime(2022, 9, 20).date(), term='
         mem_pagos.append([datetime.strptime(pago[0], "%d/%m/%y").date(), renta, amortizacion])
     total_dates = (mem_pagos[-1][0]-init_date).days
 
-    curve = define_term_curve(r, total_dates, 'nv')
+    curve = define_term_curve(r, total_dates, term=term)
 
     plt.plot(range(total_dates), curve)
     plt.show()
