@@ -58,7 +58,19 @@ if __name__ == "__main__":
     print(years.keys())
 
     begin_y = 2008
-    end_y   = 2018
+    end_y   = begin_y + 10
 
+    from nelson_siegel_svensson.calibrate import calibrate_ns_ols
     for year in range(begin_y, end_y + 1):
-        print(year)
+        for e in years[str(year)].iterrows():
+            terms = np.asarray(list(dict(e[1]).keys())) / 12
+            rates = np.asarray(list(e[1]))
+            nsv_curve, status = calibrate_ns_ols(terms, rates, tau0=1.0)  # starting value of 1.0 for the optimization of tau
+            t = np.linspace(0, 30, 100)
+            plt.plot(t, nsv_curve(t))
+            plt.show()
+
+nsv_curve, status = calibrate_ns_ols(terms, rates, tau0=1.0)  # starting value of 1.0 for the optimization of tau
+t = np.linspace(0, 30, 100)
+plt.plot(t, nsv_curve(t))
+plt.show()

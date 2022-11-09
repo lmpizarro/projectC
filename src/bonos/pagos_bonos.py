@@ -1,4 +1,3 @@
-from unittest.mock import CallableMixin
 import pandas as pd
 from datetime import datetime, timedelta, date
 from scrap_bonos import DAYS_IN_A_YEAR, ONE_BPS
