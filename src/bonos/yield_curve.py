@@ -24,18 +24,23 @@ def download():
 
 import numpy as np
 import matplotlib.pyplot as plt
+import collections
+
 
 "https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics"
 columns = ['1 Mo', '2 Mo', '4 Mo', '3 Mo', '6 Mo', '1 Yr', '2 Yr', '3 Yr', '5 Yr', '7 Yr', '10 Yr', '20 Yr', '30 Yr']
 columns_m = [1, 2, 3, 4, 6, 12, 24, 36, 60, 72, 120, 240, 360]
 map_y = {c: columns_m[i] for i, c in enumerate(columns)}
-years = {}
+by_years = {}
 if __name__ == "__main__":
     from pathlib import Path
     curve_path = Path('yield_curve').glob('*.pkl')
     for c in curve_path:
         year = c.stem.split('_')[1]
         df = pd.read_pickle(c)
+        df = df[::-1]
+        df = df.reset_index()
+        
         if '30 Yr' not in df.keys():
             df['30 Yr'] = df['20 Yr']
         if '2 Mo' not in df.keys():
@@ -45,20 +50,45 @@ if __name__ == "__main__":
 
         df.rename(map_y, axis=1, inplace=True)
         df[columns_m] = df[columns_m].interpolate(method='linear', axis=1)
-        # df.set_index('Date', inplace=True)
+        df[columns_m] = df[columns_m].interpolate(method='linear', axis=0)
         df['Date'] = pd.to_datetime(df['Date'])
         df.set_index('Date', inplace=True)
-        df = df.reindex(pd.date_range(df.index.min(), df.index.max())).sort_index(ascending=False).reset_index().rename(columns={'index': 'Date'})
-        df[columns_m] = df[columns_m].interpolate(method='linear', axis=0)
-        df = df[columns_m]
-        years[year] = df
+        df.drop('index', axis=1, inplace=True)
 
-        print(df.head(10))
+        by_years[year] = df[columns_m]
+        print(df.tail())
 
-    print(years.keys())
+
+    od = collections.OrderedDict(sorted(by_years.items()))
+    complete_df = pd.DataFrame()
+
+    for k in od.keys():
+        complete_df = pd.concat([complete_df, od[k]])
+    
+
+    complete_df.index
+
+    from matplotlib import cm
+
+    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+    X = np.arange(complete_df.shape[0])
+    Y = np.asarray([int(k) for k in complete_df.keys()])
+    X, Y = np.meshgrid(Y, X)
+
+
+    # Plot the surface.
+    surf = ax.plot_surface(Y, X, complete_df, cmap=cm.coolwarm,
+                       linewidth=0, antialiased=False)
+    plt.show()
+
+    plt.plot(complete_df)
+    plt.show()
+
 
     begin_y = 2008
     end_y   = begin_y + 10
+
+    exit()
 
     from nelson_siegel_svensson.calibrate import calibrate_ns_ols
     for year in range(begin_y, end_y + 1):
