@@ -21,19 +21,10 @@ bonos = {
                                ('09/01/28', 0.2, 10), ('09/07/28', 0.15, 10),
                                ('09/01/29', 0.1, 10), ('09/07/29', 0.05, 10),
                                ], "pay_per_year":2},
-            "GD30": {"pagos": [('09/01/23', 0.25, 0), ('09/07/23', 0.25, 0),
-                               ('09/01/24', 0.38, 0), ('09/07/24', 0.38, 4),
-                               ('09/01/25', 0.36, 8), ('09/07/25', 0.33, 8),
-                               ('09/01/26', 0.3, 8), ('09/07/26', 0.27, 8),
-                               ('09/01/27', 0.24, 8), ('09/07/27', 0.21, 8),
-                               ('09/01/28', 0.42, 8), ('09/07/28', 0.35, 8),
-                               ('09/01/29', 0.28, 8), ('09/07/29', 0.21, 8),
-                               ('09/01/30', 0.14, 8), ('09/07/30', 0.07, 8),
-                               ],  "pay_per_year":2},
             }
 
 
-nombre_bonos = {'GD' :[35,38,41,46]}
+nombre_bonos = {'GD' :[30,35,38,41,46]}
 
 def process_csv(nombre_bonos):
     for tipo in nombre_bonos:
@@ -51,15 +42,28 @@ def process_csv(nombre_bonos):
             bono['pagos'] = pagos
             bono["pay_per_year"] = 2
             ticker = row[1]['Ticker']
-
+            print(ticker)
             bonos[ticker] = bono
+            if anio == 30:
+                a_ticker = f'AL{anio}'
+                bonos[a_ticker] = bono.copy()
+            elif anio == 38:
+                a_ticker = f'AE{anio}'
+                bonos[a_ticker] = bono.copy()
+            elif anio == 35:
+                a_ticker = f'AL{anio}'
+                bonos[a_ticker] = bono.copy()
+            elif anio == 41:
+                a_ticker = f'AL{anio}'
+                bonos[a_ticker] = bono.copy()
 
     with open('bonos.pkl', 'wb') as fp:
         pickle.dump(bonos, fp)
 
 
+process_csv(nombre_bonos)
 
-
+exit()
 def scrap_bonos_rava():
     url = "https://www.rava.com/cotizaciones/bonos"
 
@@ -125,7 +129,7 @@ def scrap_cash_flows(ticker):
     return df
 
 if __name__ == '__main__':
-    tickers = ['AL29D', 'AL30D', 'AE38D', 'AL41D', 'AL35D', 'GD29D', 'GD30D', 'GD46D', 'GD38D', 'GD35D']
+    tickers = ['AL29D', 'AL30D', 'AE38D', 'AL41D', 'AL35D', 'GD29D', 'GD30D', 'GD46D', 'GD38D', 'GD35D', 'GD41D']
 
     print('tkr', '  precio', '  tir', '  m_dur', '  cash', '  amort', '  cupon')
     for ticker in tickers:
