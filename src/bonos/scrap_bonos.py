@@ -60,10 +60,6 @@ def process_csv(nombre_bonos):
     with open('bonos.pkl', 'wb') as fp:
         pickle.dump(bonos, fp)
 
-
-process_csv(nombre_bonos)
-
-exit()
 def scrap_bonos_rava():
     url = "https://www.rava.com/cotizaciones/bonos"
 
