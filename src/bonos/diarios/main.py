@@ -11,6 +11,16 @@ def ccl():
     df3 = df3[['fecha','ccl']]
     return df3
 
+def mayorista():
+    df = pd.read_csv('dol-mayor.csv')
+    df['fecha'] = pd.to_datetime(df['fecha'],  format='%Y-%m-%d')
+    
+
+    df.rename(columns={'ultimo': 'mayorista'}, inplace=True)
+
+
+    return df[['mayorista', 'fecha']]
+
 def riesgo_pais():
     df2 = pd.read_csv('riesgo_pais.csv')
     df2.fillna(method='ffill', inplace=True)
@@ -43,10 +53,9 @@ def referencias(tickers=['EEM', 'GGAL', 'YPF']):
     return t
 
 if __name__ == '__main__':
-
+    
+    dolar_may = mayorista()
     refs = referencias()
-
-
     bonos_dict = leer_bonos()
     df_riesgo_pais = riesgo_pais()
     df_ccl = ccl()
@@ -57,6 +66,7 @@ if __name__ == '__main__':
     df_merge = df_merge.merge(bonos_dict['al30d'], on='fecha')
     df_merge = df_merge.merge(bonos_dict['gd30'], on='fecha')
     df_merge = df_merge.merge(refs, on='fecha')
+    df_merge = df_merge.merge(dolar_may, on='fecha')
 
     df_merge['al30usd'] = df_merge.al30 / df_merge.ccl
     df_merge['gd30usd'] = df_merge.gd30 / df_merge.ccl
@@ -68,7 +78,7 @@ if __name__ == '__main__':
     plt.plot(df_merge.riesgo)
     plt.show()
 
-    m_corr = df_merge[['YPF', 'GGAL','EEM', 'al30d', 'al30usd', 'gd30d', 'gd30usd', 'ccl', 'riesgo']].corr()
+    m_corr = df_merge[['mayorista','EEM', 'al30d', 'al30usd', 'gd30d', 'gd30usd', 'ccl', 'riesgo']].corr()
 
     print(m_corr)
 
