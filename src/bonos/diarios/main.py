@@ -46,7 +46,7 @@ def leer_bonos():
 
     return bonos_dict
 
-def referencias(tickers=['EEM', 'GGAL', 'YPF']):
+def referencias(tickers=['EEM', 'GGAL', 'YPF', '^TNX', '^TYX', '^FVX']):
     t = yf.download(tickers,  '2020-01-02')['Adj Close']
     t['fecha'] = t.index
 
@@ -78,7 +78,7 @@ if __name__ == '__main__':
     plt.plot(df_merge.riesgo)
     plt.show()
 
-    m_corr = df_merge[['mayorista','EEM', 'al30d', 'al30usd', 'gd30d', 'gd30usd', 'ccl', 'riesgo']].corr()
+    m_corr = df_merge[['mayorista','EEM', 'al30d', 'al30usd', 'gd30d', 'gd30usd', 'ccl', 'riesgo', '^TNX', '^TYX', '^FVX']].corr()
 
     print(m_corr)
 
