@@ -1,7 +1,8 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import yfinance as yf
-
+import pickle
+import numpy as np
 
 def ccl():
     df3 = pd.read_csv('ccl.csv')
@@ -52,8 +53,7 @@ def referencias(tickers=['EEM', 'GGAL', 'YPF', '^TNX', '^TYX', '^FVX']):
 
     return t
 
-if __name__ == '__main__':
-    
+def create_df_wrk():
     dolar_may = mayorista()
     refs = referencias()
     bonos_dict = leer_bonos()
@@ -70,16 +70,80 @@ if __name__ == '__main__':
 
     df_merge['al30usd'] = df_merge.al30 / df_merge.ccl
     df_merge['gd30usd'] = df_merge.gd30 / df_merge.ccl
-    print(df_merge.tail())
 
-    plt.plot(df_merge.al30usd-df_merge.gd30d)
-    plt.show()
+    return df_merge
 
-    plt.plot(df_merge.riesgo)
-    plt.show()
+def valor_bono_disc(pair_pagos, tasa, pagos_p_a=2):
+    valor = 0
+    for e in pair_pagos:
+        print(e)
+        v = e[1]/np.power(1+tasa/pagos_p_a, pagos_p_a*e[0])
+        # print(e, v)
+        valor += v 
+    return valor
+
+def get_nominals(bono, today):
+
+    total_amortizacion = 0
+    total_renta = 0
+    pagos = bono["pagos"]
+    init_date = pagos[0][0]
+
+    time_to_finish = delta_time_years(pagos[len(pagos)-1][0], today) 
+
+    pairs_time_pagos = []
+    for pago in pagos:
+        dia_pago = datetime.strptime(pago[0], "%d/%m/%y").date()
+        if dia_pago < today:
+            continue
+        time_to_pago = delta_time_years(pago[0], today)
+        renta = pago[1]
+        amortizacion = pago[2]
+        total_amortizacion += amortizacion
+        total_renta += renta
+        r_mas_a = renta + amortizacion
+
+        pairs_time_pagos.append((time_to_pago, r_mas_a))
+
+    return total_amortizacion, total_renta, pairs_time_pagos
+
+
+def curva_v_r(bono):
+    rs = np.linspace(0.0001, 1.0, 100)
+    vs = np.zeros(100)
+    for i, r in enumerate(rs):
+        vs[i] = valor_bono_disc(pair_pagos, r)
+ 
+if __name__ == '__main__':
+   
+    # df_merge = create_df_wrk()
+    # with open('df_wrk.pkl', 'wb') as f:
+    #    pickle.dump(df_merge, f, protocol=pickle.HIGHEST_PROTOCOL )
+    with open('df_wrk.pkl', 'rb') as f:
+        df_merge = pickle.load(f)
+
+    with open('bonos.pkl', 'rb') as f:
+        bonos = pickle.load(f)
+
+    curva_v_r(bonos['AL30'])
+
 
     m_corr = df_merge[['mayorista','EEM', 'al30d', 'al30usd', 'gd30d', 'gd30usd', 'ccl', 'riesgo', '^TNX', '^TYX', '^FVX']].corr()
 
     print(m_corr)
 
+    from scipy import stats
+    plt.scatter(df_merge['^FVX'], df_merge.gd30d)
+    plt.show()
+
+    plt.scatter(df_merge['^TYX'], df_merge.gd30d)
+    plt.show()
+
+    plt.scatter(df_merge['^TNX'], df_merge.gd30d)
+    plt.show()
+
+    for b in ['^TNX', '^TYX', '^FVX']:
+        slope, intercept, r, p, std_err = stats.linregress(df_merge[b], df_merge.gd30d)
+        print(f'{b} slope, intercept, r, p, std_err')
+        print(slope, intercept, r, p, std_err)
 
