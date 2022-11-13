@@ -243,20 +243,20 @@ if __name__ == '__main__':
     print(m_corr_al41)
 
 
-    for b in ['^TNX', '^TYX', '^FVX']:
-        for bono in ['al30d', 'al41d']:
-            slope, intercept, r, p, std_err = stats.linregress(df_merge[b], df_merge[f'tir_{bono}'])
+    for bono in ['al30d', 'al41d']:
+        for b_usa in ['^TNX', '^TYX', '^FVX']:
+            slope, intercept, r, p, std_err = stats.linregress(df_merge[b_usa], df_merge[f'tir_{bono}'])
 
             fig, ax = plt.subplots()
-            ax.scatter(df_merge[b], df_merge[f'tir_{bono}'], c="green", alpha=0.5, marker=r'$\clubsuit$',
+            ax.scatter(df_merge[b_usa], df_merge[f'tir_{bono}'], c="green", alpha=0.5, marker=r'$\clubsuit$',
                        label="scatter")
-            ax.scatter(df_merge[b], df_merge[b] * slope + intercept,
+            ax.scatter(df_merge[b_usa], df_merge[b_usa] * slope + intercept,
                        label="regresion")
-            ax.set_xlabel(b)
+            ax.set_xlabel(b_usa)
             ax.set_ylabel(bono)
             ax.legend()
             plt.show()
 
-            print(f'{b} slope, intercept, r, p, std_err')
+            print(f'{bono} vs {b_usa}  slope, intercept, r, p, std_err')
             print(slope, intercept, r, p, std_err)
 
