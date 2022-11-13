@@ -176,16 +176,32 @@ def curva_v_r(bono, fecha):
         vs[i] = valor_bono_disc(pair_time_pagos, r)
     return rs, vs
  
+def corr_bono(bono, df_merge):
+    with open('bonos.pkl', 'rb') as f:
+        bonos = pickle.load(f)
+
+    estructura = bonos[bono.upper()]
+    tir = np.zeros(df_merge.shape[0]) 
+    for i,r in df_merge.iterrows():
+        tasa, precio = curva_v_r(estructura, r.fecha)
+        ftir_precio = Fit.polyModel(precio, tasa)
+        tir[i] = ftir_precio(r.al30d)
+    df_merge[f'tir_{bono}d'] = tir
+
+    m_corr = df_merge[['mayorista', 'merval', 'ccl', 'EEM', f'{bono}d', f'{bono}ccl', 
+         'riesgo', '^TNX', '^TYX', '^FVX', '^IRX', f'tir_{bono}d']].corr()
+
+    return m_corr
+
+
 if __name__ == '__main__':
    
-    df_merge = create_df_wrk()
-    with open('df_wrk.pkl', 'wb') as f:
-        pickle.dump(df_merge, f, protocol=pickle.HIGHEST_PROTOCOL )
+    # df_merge = create_df_wrk()
+    # with open('df_wrk.pkl', 'wb') as f:
+    #    pickle.dump(df_merge, f, protocol=pickle.HIGHEST_PROTOCOL )
     
     with open('df_wrk.pkl', 'rb') as f:
         df_merge = pickle.load(f)
-
-    bono = 'AL30'
 
 
     fig, ax = plt.subplots()
@@ -218,20 +234,16 @@ if __name__ == '__main__':
     ax.legend(handlelength=4)
     plt.show()
 
+    bono = 'al30'
+    m_corr_al30 = corr_bono(bono, df_merge)
 
+    print(m_corr_al30)
+    bono = 'al41'
+    m_corr_al41 = corr_bono(bono, df_merge)
 
-    with open('bonos.pkl', 'rb') as f:
-        bonos = pickle.load(f)
-    estructura = bonos[bono]
-    tir = np.zeros(df_merge.shape[0]) 
-    for i,r in df_merge.iterrows():
-        tasa, precio = curva_v_r(estructura, r.fecha)
-        ftir_precio = Fit.polyModel(precio, tasa)
-        tir[i] = ftir_precio(r.al30d)
-    df_merge['tir_al30d'] = tir
-    m_corr = df_merge[['mayorista', 'merval', 'ccl', 'EEM', 'al30d', 'al30ccl', 'gd30d', 'gd30ccl', 'riesgo', '^TNX', '^TYX', '^FVX', '^IRX', 'tir_al30d']].corr()
+    print(m_corr_al41)
 
-    print(m_corr)
+    print(df_merge.keys())
 
     for b in ['^TNX', '^TYX', '^FVX']:
         slope, intercept, r, p, std_err = stats.linregress(df_merge[b], df_merge.tir_al30d)
