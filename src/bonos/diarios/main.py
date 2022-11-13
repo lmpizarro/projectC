@@ -203,7 +203,6 @@ if __name__ == '__main__':
     with open('df_wrk.pkl', 'rb') as f:
         df_merge = pickle.load(f)
 
-
     fig, ax = plt.subplots()
     ax.plot(df_merge.fecha, df_merge.al30d, 'g', label='al30d')
     ax.plot(df_merge.fecha, df_merge.al30ccl, 'b', label='al30ccl')
@@ -243,21 +242,21 @@ if __name__ == '__main__':
 
     print(m_corr_al41)
 
-    print(df_merge.keys())
 
     for b in ['^TNX', '^TYX', '^FVX']:
-        slope, intercept, r, p, std_err = stats.linregress(df_merge[b], df_merge.tir_al30d)
+        for bono in ['al30d', 'al41d']:
+            slope, intercept, r, p, std_err = stats.linregress(df_merge[b], df_merge[f'tir_{bono}'])
 
-        fig, ax = plt.subplots()
-        ax.scatter(df_merge[b], df_merge.tir_al30d, c="green", alpha=0.5, marker=r'$\clubsuit$',
-                   label="scatter")
-        ax.scatter(df_merge[b], df_merge[b] * slope + intercept,
-                   label="regresion")
-        ax.set_xlabel(b)
-        ax.set_ylabel(bono)
-        ax.legend()
-        plt.show()
+            fig, ax = plt.subplots()
+            ax.scatter(df_merge[b], df_merge[f'tir_{bono}'], c="green", alpha=0.5, marker=r'$\clubsuit$',
+                       label="scatter")
+            ax.scatter(df_merge[b], df_merge[b] * slope + intercept,
+                       label="regresion")
+            ax.set_xlabel(b)
+            ax.set_ylabel(bono)
+            ax.legend()
+            plt.show()
 
-        print(f'{b} slope, intercept, r, p, std_err')
-        print(slope, intercept, r, p, std_err)
+            print(f'{b} slope, intercept, r, p, std_err')
+            print(slope, intercept, r, p, std_err)
 
