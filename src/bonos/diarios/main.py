@@ -71,7 +71,13 @@ def leer_bonos():
 
     return bonos_dict
 
-def referencias(tickers=['EEM', 'GGAL', 'YPF', '^TNX', '^TYX', '^FVX']):
+"""
+13 Week Treasury Bill (^IRX)
+Treasury Yield 10 Years (^TNX)
+Treasury Yield 30 Years (^TYX)
+Treasury Yield 5 Years (^FVX)
+"""
+def referencias(tickers=['EEM', 'GGAL', 'YPF', '^TNX', '^TYX', '^FVX', '^IRX']):
     t = yf.download(tickers,  '2020-01-02')['Adj Close']
     t['fecha'] = t.index
     usd_bonds = ['^TNX', '^TYX', '^FVX']
@@ -164,21 +170,23 @@ if __name__ == '__main__':
         ftir_precio = Fit.polyModel(precio, tasa)
         tir[i] = ftir_precio(r.al30d)
     df_merge['tir_al30d'] = tir
-    m_corr = df_merge[['mayorista','EEM', 'al30d', 'al30usd', 'gd30d', 'gd30usd', 'ccl', 'riesgo', '^TNX', '^TYX', '^FVX', 'tir_al30d']].corr()
+    m_corr = df_merge[['mayorista','EEM', 'al30d', 'al30usd', 'gd30d', 'gd30usd', 'ccl', 'riesgo', '^TNX', '^TYX', '^FVX', '^IRX', 'tir_al30d']].corr()
 
     print(m_corr)
 
-    plt.scatter(df_merge['^FVX'], df_merge.tir_al30d)
-    plt.show()
-
-    plt.scatter(df_merge['^TYX'], df_merge.tir_al30d)
-    plt.show()
-
-    plt.scatter(df_merge['^TNX'], df_merge.tir_al30d)
-    plt.show()
-
     for b in ['^TNX', '^TYX', '^FVX']:
         slope, intercept, r, p, std_err = stats.linregress(df_merge[b], df_merge.tir_al30d)
+
+        fig, ax = plt.subplots()
+        ax.scatter(df_merge[b], df_merge.tir_al30d, c="green", alpha=0.5, marker=r'$\clubsuit$',
+                   label="scatter")
+        ax.scatter(df_merge[b], df_merge[b] * slope + intercept,
+                   label="regresion")
+        ax.set_xlabel(b)
+        ax.set_ylabel(bono)
+        ax.legend()
+        plt.show()
+
         print(f'{b} slope, intercept, r, p, std_err')
         print(slope, intercept, r, p, std_err)
 
