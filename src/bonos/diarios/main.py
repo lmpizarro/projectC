@@ -34,10 +34,10 @@ class FromYF:
     Treasury Yield 5 Years (^FVX)
     """
     @staticmethod
-    def referencias(tickers=['EEM', 'GGAL', 'YPF', '^TNX', '^TYX', '^FVX', '^IRX']):
+    def referencias(tickers=['EEM', 'GGAL', 'MA.BA', '^TNX', '^TYX', '^FVX', '^IRX']):
         t = yf.download(tickers,  '2020-01-02')['Adj Close']
         t['fecha'] = t.index
-        usd_bonds = ['^TNX', '^TYX', '^FVX']
+        usd_bonds = ['^TNX', '^TYX', '^FVX', '^IRX']
         t[usd_bonds] = t[usd_bonds] / 100
         return t
 
@@ -71,7 +71,7 @@ class LeerCSVS:
     @staticmethod
     def leer_bonos():
         bonos_dict = {}
-        bonos = ['al30', 'al30d', 'gd30', 'gd30d']
+        bonos = ['al30', 'al30d', 'gd30', 'gd30d', 'gd38', 'gd38d']
         for bono in bonos:
             print(bono)
             df1 = pd.read_csv(f'{bono}.csv')
@@ -93,14 +93,17 @@ def create_df_wrk():
 
     df_merge = bonos_dict['al30'].merge(df_riesgo_pais, on='fecha')
     df_merge = df_merge.merge(df_ccl, on='fecha')
-    df_merge = df_merge.merge(bonos_dict['gd30d'], on='fecha')
     df_merge = df_merge.merge(bonos_dict['al30d'], on='fecha')
     df_merge = df_merge.merge(bonos_dict['gd30'], on='fecha')
+    df_merge = df_merge.merge(bonos_dict['gd30d'], on='fecha')
     df_merge = df_merge.merge(refs, on='fecha')
     df_merge = df_merge.merge(dolar_may, on='fecha')
 
-    df_merge['al30usd'] = df_merge.al30 / df_merge.ccl
-    df_merge['gd30usd'] = df_merge.gd30 / df_merge.ccl
+    df_merge = df_merge.merge(bonos_dict['gd38'], on='fecha')
+    df_merge = df_merge.merge(bonos_dict['gd38d'], on='fecha')
+    df_merge['al30ccl'] = df_merge.al30 / df_merge.ccl
+    df_merge['gd30ccl'] = df_merge.gd30 / df_merge.ccl
+    df_merge['gd38ccl'] = df_merge.gd38 / df_merge.ccl
 
     return df_merge
 
@@ -120,8 +123,6 @@ def delta_time_years(date2: str, date1):
 
 def get_nominals(bono, today):
 
-    total_amortizacion = 0
-    total_renta = 0
     pagos = bono["pagos"]
     init_date = pagos[0][0]
 
@@ -134,18 +135,17 @@ def get_nominals(bono, today):
         time_to_pago = delta_time_years(pago[0], today)
         renta = pago[1]
         amortizacion = pago[2]
-        total_amortizacion += amortizacion
-        total_renta += renta
+
         r_mas_a = renta + amortizacion
 
         pairs_time_pagos.append((time_to_pago, r_mas_a))
 
-    return total_amortizacion, total_renta, pairs_time_pagos
+    return pairs_time_pagos
 
 def curva_v_r(bono, fecha):
     rs = np.linspace(0.0001, 1.0, 100)
     vs = np.zeros(100)
-    _, _, pair_time_pagos = get_nominals(bono, fecha)   
+    pair_time_pagos = get_nominals(bono, fecha)   
     for i, r in enumerate(rs):
         vs[i] = valor_bono_disc(pair_time_pagos, r)
     return rs, vs
@@ -170,7 +170,7 @@ if __name__ == '__main__':
         ftir_precio = Fit.polyModel(precio, tasa)
         tir[i] = ftir_precio(r.al30d)
     df_merge['tir_al30d'] = tir
-    m_corr = df_merge[['mayorista','EEM', 'al30d', 'al30usd', 'gd30d', 'gd30usd', 'ccl', 'riesgo', '^TNX', '^TYX', '^FVX', '^IRX', 'tir_al30d']].corr()
+    m_corr = df_merge[['mayorista', 'ccl', 'EEM', 'al30d', 'al30ccl', 'gd30d', 'gd30ccl', 'riesgo', '^TNX', '^TYX', '^FVX', '^IRX', 'tir_al30d']].corr()
 
     print(m_corr)
 
