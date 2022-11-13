@@ -1,8 +1,32 @@
+from datetime import datetime
+from scipy import stats
 import pandas as pd
 import matplotlib.pyplot as plt
 import yfinance as yf
 import pickle
 import numpy as np
+
+DAYS_IN_A_YEAR = 364
+
+import scipy.optimize
+
+
+class Fit:
+    @staticmethod
+    def monoExp(x, m, t, b):
+        return m * np.exp(-t * x) + b
+
+    @staticmethod
+    def optimizeExp(rs, vs, p0):
+        params, cv = scipy.optimize.curve_fit(Fit.monoExp, rs, vs, p0)
+        m, t, b = params
+
+        return m, t, b
+    
+    @staticmethod
+    def polyModel(rs, vs):
+        return np.poly1d(np.polyfit(rs, vs, 8))
+
 
 def ccl():
     df3 = pd.read_csv('ccl.csv')
@@ -15,7 +39,7 @@ def ccl():
 def mayorista():
     df = pd.read_csv('dol-mayor.csv')
     df['fecha'] = pd.to_datetime(df['fecha'],  format='%Y-%m-%d')
-    
+     
 
     df.rename(columns={'ultimo': 'mayorista'}, inplace=True)
 
@@ -50,7 +74,8 @@ def leer_bonos():
 def referencias(tickers=['EEM', 'GGAL', 'YPF', '^TNX', '^TYX', '^FVX']):
     t = yf.download(tickers,  '2020-01-02')['Adj Close']
     t['fecha'] = t.index
-
+    usd_bonds = ['^TNX', '^TYX', '^FVX']
+    t[usd_bonds] = t[usd_bonds] / 100
     return t
 
 def create_df_wrk():
@@ -76,11 +101,16 @@ def create_df_wrk():
 def valor_bono_disc(pair_pagos, tasa, pagos_p_a=2):
     valor = 0
     for e in pair_pagos:
-        print(e)
         v = e[1]/np.power(1+tasa/pagos_p_a, pagos_p_a*e[0])
-        # print(e, v)
         valor += v 
     return valor
+
+def delta_time_years(date2: str, date1):
+    end_date = datetime.strptime(date2, "%d/%m/%y").date()
+    time_to_finish = end_date - date1.to_pydatetime().date()
+    time_to_finish = time_to_finish.total_seconds()/(3600*24*DAYS_IN_A_YEAR)
+
+    return time_to_finish
 
 def get_nominals(bono, today):
 
@@ -90,11 +120,10 @@ def get_nominals(bono, today):
     init_date = pagos[0][0]
 
     time_to_finish = delta_time_years(pagos[len(pagos)-1][0], today) 
-
     pairs_time_pagos = []
     for pago in pagos:
         dia_pago = datetime.strptime(pago[0], "%d/%m/%y").date()
-        if dia_pago < today:
+        if dia_pago < today.date():
             continue
         time_to_pago = delta_time_years(pago[0], today)
         renta = pago[1]
@@ -107,43 +136,49 @@ def get_nominals(bono, today):
 
     return total_amortizacion, total_renta, pairs_time_pagos
 
-
-def curva_v_r(bono):
+def curva_v_r(bono, fecha):
     rs = np.linspace(0.0001, 1.0, 100)
     vs = np.zeros(100)
+    _, _, pair_time_pagos = get_nominals(bono, fecha)   
     for i, r in enumerate(rs):
-        vs[i] = valor_bono_disc(pair_pagos, r)
+        vs[i] = valor_bono_disc(pair_time_pagos, r)
+    return rs, vs
  
 if __name__ == '__main__':
    
     # df_merge = create_df_wrk()
     # with open('df_wrk.pkl', 'wb') as f:
-    #    pickle.dump(df_merge, f, protocol=pickle.HIGHEST_PROTOCOL )
+    #   pickle.dump(df_merge, f, protocol=pickle.HIGHEST_PROTOCOL )
+
     with open('df_wrk.pkl', 'rb') as f:
         df_merge = pickle.load(f)
 
+    bono = 'AL30'
+
     with open('bonos.pkl', 'rb') as f:
         bonos = pickle.load(f)
-
-    curva_v_r(bonos['AL30'])
-
-
-    m_corr = df_merge[['mayorista','EEM', 'al30d', 'al30usd', 'gd30d', 'gd30usd', 'ccl', 'riesgo', '^TNX', '^TYX', '^FVX']].corr()
+    estructura = bonos[bono]
+    tir = np.zeros(df_merge.shape[0]) 
+    for i,r in df_merge.iterrows():
+        tasa, precio = curva_v_r(estructura, r.fecha)
+        ftir_precio = Fit.polyModel(precio, tasa)
+        tir[i] = ftir_precio(r.al30d)
+    df_merge['tir_al30d'] = tir
+    m_corr = df_merge[['mayorista','EEM', 'al30d', 'al30usd', 'gd30d', 'gd30usd', 'ccl', 'riesgo', '^TNX', '^TYX', '^FVX', 'tir_al30d']].corr()
 
     print(m_corr)
 
-    from scipy import stats
-    plt.scatter(df_merge['^FVX'], df_merge.gd30d)
+    plt.scatter(df_merge['^FVX'], df_merge.tir_al30d)
     plt.show()
 
-    plt.scatter(df_merge['^TYX'], df_merge.gd30d)
+    plt.scatter(df_merge['^TYX'], df_merge.tir_al30d)
     plt.show()
 
-    plt.scatter(df_merge['^TNX'], df_merge.gd30d)
+    plt.scatter(df_merge['^TNX'], df_merge.tir_al30d)
     plt.show()
 
     for b in ['^TNX', '^TYX', '^FVX']:
-        slope, intercept, r, p, std_err = stats.linregress(df_merge[b], df_merge.gd30d)
+        slope, intercept, r, p, std_err = stats.linregress(df_merge[b], df_merge.tir_al30d)
         print(f'{b} slope, intercept, r, p, std_err')
         print(slope, intercept, r, p, std_err)
 
