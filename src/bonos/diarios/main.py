@@ -23,9 +23,20 @@ class Fit:
         return m, t, b
     
     @staticmethod
-    def polyModel(rs, vs):
-        return np.poly1d(np.polyfit(rs, vs, 8))
+    def polyModel(rs, vs, degree=8):
+        return np.poly1d(np.polyfit(rs, vs, degree))
 
+    @staticmethod
+    def monoLog(x, m, t, b):
+        return m * np.log(t * x) + b
+
+    @staticmethod
+    def optimizeLog(rs, vs, p0):
+        params, cv = scipy.optimize.curve_fit(Fit.monoLog, rs, vs, p0)
+        m, t, b = params
+
+        return m, t, b
+ 
 class FromYF:
     """
     13 Week Treasury Bill (^IRX)
@@ -104,14 +115,13 @@ def create_df_wrk():
     df_ccl = LeerCSVS.ccl()
 
     df_merge = bonos_dict['al30'].merge(df_riesgo_pais, on='fecha')
+    df_merge = df_merge.merge(bonos_dict['gd30'], on='fecha')
+    df_merge = df_merge.merge(bonos_dict['al41'], on='fecha')
+    df_merge = df_merge.merge(bonos_dict['gd41'], on='fecha')
 
     df_merge = df_merge.merge(bonos_dict['al30d'], on='fecha')
-    df_merge = df_merge.merge(bonos_dict['gd30'], on='fecha')
     df_merge = df_merge.merge(bonos_dict['gd30d'], on='fecha')
-
-    df_merge = df_merge.merge(bonos_dict['al41'], on='fecha')
     df_merge = df_merge.merge(bonos_dict['al41d'], on='fecha')
-    df_merge = df_merge.merge(bonos_dict['gd41'], on='fecha')
     df_merge = df_merge.merge(bonos_dict['gd41d'], on='fecha')
 
 
@@ -127,7 +137,7 @@ def create_df_wrk():
 
     df_merge['al30ccl'] = df_merge.al30 / df_merge.ccl
     df_merge['al41ccl'] = df_merge.al41 / df_merge.ccl
-    df_merge['gd41ccl'] = df_merge.al41 / df_merge.ccl
+    df_merge['gd41ccl'] = df_merge.gd41 / df_merge.ccl
     df_merge['gd30ccl'] = df_merge.gd30 / df_merge.ccl
     df_merge['gd38ccl'] = df_merge.gd38 / df_merge.ccl
 
@@ -196,9 +206,9 @@ def corr_bono(bono, df_merge):
 
 if __name__ == '__main__':
    
-    # df_merge = create_df_wrk()
-    # with open('df_wrk.pkl', 'wb') as f:
-    #    pickle.dump(df_merge, f, protocol=pickle.HIGHEST_PROTOCOL )
+    df_merge = create_df_wrk()
+    with open('df_wrk.pkl', 'wb') as f:
+         pickle.dump(df_merge, f, protocol=pickle.HIGHEST_PROTOCOL )
     
     with open('df_wrk.pkl', 'rb') as f:
         df_merge = pickle.load(f)
@@ -246,8 +256,14 @@ if __name__ == '__main__':
     for bono in ['al30d', 'al41d']:
         for b_usa in ['^TNX', '^TYX', '^FVX']:
             slope, intercept, r, p, std_err = stats.linregress(df_merge[b_usa], df_merge[f'tir_{bono}'])
-
             fig, ax = plt.subplots()
+
+            if bono == 'al41d':
+                poly = Fit.polyModel(df_merge[b_usa], df_merge[f'tir_{bono}'], degree = 3)
+                r_bono = poly(df_merge[b_usa])
+                ax.scatter(df_merge[b_usa], r_bono,
+                           label="poly")
+
             ax.scatter(df_merge[b_usa], df_merge[f'tir_{bono}'], c="green", alpha=0.5, marker=r'$\clubsuit$',
                        label="scatter")
             ax.scatter(df_merge[b_usa], df_merge[b_usa] * slope + intercept,
@@ -259,4 +275,3 @@ if __name__ == '__main__':
 
             print(f'{bono} vs {b_usa}  slope, intercept, r, p, std_err')
             print(slope, intercept, r, p, std_err)
-
