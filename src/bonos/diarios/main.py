@@ -26,6 +26,22 @@ class Fit:
     def polyModel(rs, vs):
         return np.poly1d(np.polyfit(rs, vs, 8))
 
+class FromYF:
+    """
+    13 Week Treasury Bill (^IRX)
+    Treasury Yield 10 Years (^TNX)
+    Treasury Yield 30 Years (^TYX)
+    Treasury Yield 5 Years (^FVX)
+    """
+    @staticmethod
+    def referencias(tickers=['EEM', 'GGAL', 'YPF', '^TNX', '^TYX', '^FVX', '^IRX']):
+        t = yf.download(tickers,  '2020-01-02')['Adj Close']
+        t['fecha'] = t.index
+        usd_bonds = ['^TNX', '^TYX', '^FVX']
+        t[usd_bonds] = t[usd_bonds] / 100
+        return t
+
+
 class LeerCSVS:
     @staticmethod
     def ccl():
@@ -68,40 +84,25 @@ class LeerCSVS:
 
         return bonos_dict
 
-    """
-    13 Week Treasury Bill (^IRX)
-    Treasury Yield 10 Years (^TNX)
-    Treasury Yield 30 Years (^TYX)
-    Treasury Yield 5 Years (^FVX)
-    """
-    @staticmethod
-    def referencias(tickers=['EEM', 'GGAL', 'YPF', '^TNX', '^TYX', '^FVX', '^IRX']):
-        t = yf.download(tickers,  '2020-01-02')['Adj Close']
-        t['fecha'] = t.index
-        usd_bonds = ['^TNX', '^TYX', '^FVX']
-        t[usd_bonds] = t[usd_bonds] / 100
-        return t
+def create_df_wrk():
+    dolar_may = LeerCSVS.mayorista()
+    refs = FromYF.referencias()
+    bonos_dict = LeerCSVS.leer_bonos()
+    df_riesgo_pais = LeerCSVS.riesgo_pais()
+    df_ccl = LeerCSVS.ccl()
 
-    @staticmethod
-    def create_df_wrk():
-        dolar_may = LeerCSVS.mayorista()
-        refs = LeerCSVS.referencias()
-        bonos_dict = LeerCSVS.leer_bonos()
-        df_riesgo_pais = LeerCSVS.riesgo_pais()
-        df_ccl = LeerCSVS.ccl()
+    df_merge = bonos_dict['al30'].merge(df_riesgo_pais, on='fecha')
+    df_merge = df_merge.merge(df_ccl, on='fecha')
+    df_merge = df_merge.merge(bonos_dict['gd30d'], on='fecha')
+    df_merge = df_merge.merge(bonos_dict['al30d'], on='fecha')
+    df_merge = df_merge.merge(bonos_dict['gd30'], on='fecha')
+    df_merge = df_merge.merge(refs, on='fecha')
+    df_merge = df_merge.merge(dolar_may, on='fecha')
 
-        df_merge = bonos_dict['al30'].merge(df_riesgo_pais, on='fecha')
-        df_merge = df_merge.merge(df_ccl, on='fecha')
-        df_merge = df_merge.merge(bonos_dict['gd30d'], on='fecha')
-        df_merge = df_merge.merge(bonos_dict['al30d'], on='fecha')
-        df_merge = df_merge.merge(bonos_dict['gd30'], on='fecha')
-        df_merge = df_merge.merge(refs, on='fecha')
-        df_merge = df_merge.merge(dolar_may, on='fecha')
+    df_merge['al30usd'] = df_merge.al30 / df_merge.ccl
+    df_merge['gd30usd'] = df_merge.gd30 / df_merge.ccl
 
-        df_merge['al30usd'] = df_merge.al30 / df_merge.ccl
-        df_merge['gd30usd'] = df_merge.gd30 / df_merge.ccl
-
-        return df_merge
+    return df_merge
 
 def valor_bono_disc(pair_pagos, tasa, pagos_p_a=2):
     valor = 0
@@ -151,7 +152,7 @@ def curva_v_r(bono, fecha):
  
 if __name__ == '__main__':
    
-    df_merge = LeerCSVS.create_df_wrk()
+    df_merge = create_df_wrk()
     with open('df_wrk.pkl', 'wb') as f:
       pickle.dump(df_merge, f, protocol=pickle.HIGHEST_PROTOCOL )
 
