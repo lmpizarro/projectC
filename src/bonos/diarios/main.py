@@ -82,7 +82,7 @@ class LeerCSVS:
     @staticmethod
     def leer_bonos():
         bonos_dict = {}
-        bonos = ['al30', 'al30d', 'gd30', 'gd30d', 'gd38', 'gd38d']
+        bonos = ['al30', 'al30d', 'al41', 'al41d', 'gd41', 'gd41d', 'gd30', 'gd30d', 'gd38', 'gd38d']
         for bono in bonos:
             print(bono)
             df1 = pd.read_csv(f'{bono}.csv')
@@ -104,28 +104,34 @@ def create_df_wrk():
     df_ccl = LeerCSVS.ccl()
 
     df_merge = bonos_dict['al30'].merge(df_riesgo_pais, on='fecha')
-    df_merge = df_merge.merge(df_ccl, on='fecha')
+
     df_merge = df_merge.merge(bonos_dict['al30d'], on='fecha')
     df_merge = df_merge.merge(bonos_dict['gd30'], on='fecha')
     df_merge = df_merge.merge(bonos_dict['gd30d'], on='fecha')
-    df_merge = df_merge.merge(refs, on='fecha')
-    df_merge = df_merge.merge(dolar_may, on='fecha')
-    df_merge = df_merge.merge(merval, on='fecha')
+
+    df_merge = df_merge.merge(bonos_dict['al41'], on='fecha')
+    df_merge = df_merge.merge(bonos_dict['al41d'], on='fecha')
+    df_merge = df_merge.merge(bonos_dict['gd41'], on='fecha')
+    df_merge = df_merge.merge(bonos_dict['gd41d'], on='fecha')
+
+
 
     df_merge = df_merge.merge(bonos_dict['gd38'], on='fecha')
     df_merge = df_merge.merge(bonos_dict['gd38d'], on='fecha')
+    
+    df_merge = df_merge.merge(refs, on='fecha')
+    df_merge = df_merge.merge(dolar_may, on='fecha')
+    df_merge = df_merge.merge(merval, on='fecha')
+    df_merge = df_merge.merge(df_ccl, on='fecha')
+
+
     df_merge['al30ccl'] = df_merge.al30 / df_merge.ccl
+    df_merge['al41ccl'] = df_merge.al41 / df_merge.ccl
+    df_merge['gd41ccl'] = df_merge.al41 / df_merge.ccl
     df_merge['gd30ccl'] = df_merge.gd30 / df_merge.ccl
     df_merge['gd38ccl'] = df_merge.gd38 / df_merge.ccl
 
     return df_merge
-
-def valor_bono_disc(pair_pagos, tasa, pagos_p_a=2):
-    valor = 0
-    for e in pair_pagos:
-        v = e[1]/np.power(1+tasa/pagos_p_a, pagos_p_a*e[0])
-        valor += v 
-    return valor
 
 def delta_time_years(date2: str, date1):
     end_date = datetime.strptime(date2, "%d/%m/%y").date()
@@ -133,6 +139,13 @@ def delta_time_years(date2: str, date1):
     time_to_finish = time_to_finish.total_seconds()/(3600*24*DAYS_IN_A_YEAR)
 
     return time_to_finish
+
+def valor_bono_disc(pair_pagos, tasa, pagos_p_a=2):
+    valor = 0
+    for e in pair_pagos:
+        v = e[1]/np.power(1+tasa/pagos_p_a, pagos_p_a*e[0])
+        valor += v 
+    return valor
 
 def get_nominals(bono, today):
 
@@ -165,14 +178,47 @@ def curva_v_r(bono, fecha):
  
 if __name__ == '__main__':
    
-    # df_merge = create_df_wrk()
-    # with open('df_wrk.pkl', 'wb') as f:
-    #     pickle.dump(df_merge, f, protocol=pickle.HIGHEST_PROTOCOL )
-
+    df_merge = create_df_wrk()
+    with open('df_wrk.pkl', 'wb') as f:
+        pickle.dump(df_merge, f, protocol=pickle.HIGHEST_PROTOCOL )
+    
     with open('df_wrk.pkl', 'rb') as f:
         df_merge = pickle.load(f)
 
     bono = 'AL30'
+
+
+    fig, ax = plt.subplots()
+    ax.plot(df_merge.fecha, df_merge.al30d, 'g', label='al30d')
+    ax.plot(df_merge.fecha, df_merge.al30ccl, 'b', label='al30ccl')
+    ax.plot(df_merge.fecha, df_merge.gd30d, 'r', label='gd30d')
+    ax.plot(df_merge.fecha, df_merge.gd30ccl, 'orange', label='gd30ccl')
+
+    ax.legend(handlelength=4)
+    plt.show()
+
+    fig, ax = plt.subplots()
+    ax.plot(df_merge.fecha, df_merge.gd30d / df_merge.al30d, 'r', label='ratio gd30d:al30d')
+
+    ax.legend(handlelength=4)
+    plt.show()
+
+    fig, ax = plt.subplots()
+    ax.plot(df_merge.fecha, df_merge.al41d, 'g', label='al41d')
+    ax.plot(df_merge.fecha, df_merge.al41ccl, 'b', label='al41ccl')
+    ax.plot(df_merge.fecha, df_merge.gd41d, 'r', label='gd41d')
+    ax.plot(df_merge.fecha, df_merge.gd41ccl, 'orange', label='gd41ccl')
+
+    ax.legend(handlelength=4)
+    plt.show()
+
+    fig, ax = plt.subplots()
+    ax.plot(df_merge.fecha, df_merge.gd41d / df_merge.al41d, 'r', label='ratio gd41d:al41d')
+
+    ax.legend(handlelength=4)
+    plt.show()
+
+
 
     with open('bonos.pkl', 'rb') as f:
         bonos = pickle.load(f)
