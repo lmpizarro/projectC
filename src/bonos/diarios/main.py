@@ -34,11 +34,12 @@ class FromYF:
     Treasury Yield 5 Years (^FVX)
     """
     @staticmethod
-    def referencias(tickers=['EEM', 'GGAL', 'MA.BA', '^TNX', '^TYX', '^FVX', '^IRX']):
+    def referencias(tickers=['EEM', 'GGAL', '^TNX', '^TYX', '^FVX', '^IRX']):
         t = yf.download(tickers,  '2020-01-02')['Adj Close']
         t['fecha'] = t.index
         usd_bonds = ['^TNX', '^TYX', '^FVX', '^IRX']
         t[usd_bonds] = t[usd_bonds] / 100
+
         return t
 
 
@@ -69,6 +70,16 @@ class LeerCSVS:
         return df2
 
     @staticmethod
+    def merval():
+        df2 = pd.read_csv('merval.csv')
+        df2.fillna(method='ffill', inplace=True)
+        df2['fecha'] = pd.to_datetime(df2['fecha'],  format='%Y-%m-%d')
+        df2.rename(columns={'cierre': 'merval'}, inplace=True)
+        df2 = df2[['fecha','merval']]
+        return df2
+
+
+    @staticmethod
     def leer_bonos():
         bonos_dict = {}
         bonos = ['al30', 'al30d', 'gd30', 'gd30d', 'gd38', 'gd38d']
@@ -85,6 +96,7 @@ class LeerCSVS:
         return bonos_dict
 
 def create_df_wrk():
+    merval = LeerCSVS.merval()
     dolar_may = LeerCSVS.mayorista()
     refs = FromYF.referencias()
     bonos_dict = LeerCSVS.leer_bonos()
@@ -98,6 +110,7 @@ def create_df_wrk():
     df_merge = df_merge.merge(bonos_dict['gd30d'], on='fecha')
     df_merge = df_merge.merge(refs, on='fecha')
     df_merge = df_merge.merge(dolar_may, on='fecha')
+    df_merge = df_merge.merge(merval, on='fecha')
 
     df_merge = df_merge.merge(bonos_dict['gd38'], on='fecha')
     df_merge = df_merge.merge(bonos_dict['gd38d'], on='fecha')
@@ -152,9 +165,9 @@ def curva_v_r(bono, fecha):
  
 if __name__ == '__main__':
    
-    df_merge = create_df_wrk()
-    with open('df_wrk.pkl', 'wb') as f:
-      pickle.dump(df_merge, f, protocol=pickle.HIGHEST_PROTOCOL )
+    # df_merge = create_df_wrk()
+    # with open('df_wrk.pkl', 'wb') as f:
+    #     pickle.dump(df_merge, f, protocol=pickle.HIGHEST_PROTOCOL )
 
     with open('df_wrk.pkl', 'rb') as f:
         df_merge = pickle.load(f)
@@ -170,7 +183,7 @@ if __name__ == '__main__':
         ftir_precio = Fit.polyModel(precio, tasa)
         tir[i] = ftir_precio(r.al30d)
     df_merge['tir_al30d'] = tir
-    m_corr = df_merge[['mayorista', 'ccl', 'EEM', 'al30d', 'al30ccl', 'gd30d', 'gd30ccl', 'riesgo', '^TNX', '^TYX', '^FVX', '^IRX', 'tir_al30d']].corr()
+    m_corr = df_merge[['mayorista', 'merval', 'ccl', 'EEM', 'al30d', 'al30ccl', 'gd30d', 'gd30ccl', 'riesgo', '^TNX', '^TYX', '^FVX', '^IRX', 'tir_al30d']].corr()
 
     print(m_corr)
 
