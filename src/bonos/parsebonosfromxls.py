@@ -46,5 +46,8 @@ for ticker in Data_BONO.Ticker:
     time_to_maturity = (CF.iloc[-1]['Fecha de pago'] - CF.iloc[0]['Fecha de pago']).days / 365
     time_to_maturity = (CF.iloc[-1]['Fecha de pago'] - today).days  / 365
 
-    print(f'{iD} ', round(precio, 2), round(total_cash_flow,2), round(100 *  yild / time_to_maturity, 2))
+    print(f'{iD} ', round(precio, 2), 
+            round(total_cash_flow,2), 
+            round(100 *  yild / time_to_maturity, 2), 
+            round(total_cash_flow/time_to_maturity,2))
 
