@@ -23,6 +23,9 @@ except:
 cashflows={}
 out_df = pd.DataFrame()
 list_ars = []
+from datetime import datetime
+
+
 for ticker in Data_BONO.Ticker:
     today = datetime.now()
     iD = ticker
@@ -35,8 +38,7 @@ for ticker in Data_BONO.Ticker:
     else:
         list_ars.append(ticker)
 
-    CF = pd.read_excel('cashflows_BONO.xls', sheet_name=ticker)
-
+    CF = pd.read_excel('cashflows_BONO.xls', sheet_name=ticker, parse_dates=['Fecha de pago'], date_parser=pd.to_datetime)
     CF = CF.replace(',', '.', regex=True)
     CF.Renta = pd.to_numeric(CF.Renta)
     CF['Amortizacion'] = pd.to_numeric(CF['Amortización'])
@@ -62,3 +64,25 @@ out_df.set_index('Ticker', inplace=True)
 out_df['pctlinDur'] = out_df.precio / out_df.cashPromedio / out_df.maturity
 out_df['linDur'] = out_df.precio / out_df.cashPromedio
 print(out_df.loc[list_ars].sort_values(by='tasaPromedio'))
+
+tickers = ['AL41', 'AL30', 'AE38', 'GD46']
+
+df_pays = cashflows['AL29']
+df_pays['Total'] = df_pays[['Renta', 'Amortizacion']].sum(axis=1)
+df_pays.drop(columns=['Renta', 'Amortizacion'], inplace=True)
+
+for ticker in tickers:
+    cf = cashflows[ticker]
+    cf = cf[cf['Fecha de pago'] > today]
+    cf['Total'] = cf[['Renta', 'Amortizacion']].sum(axis=1)
+    cf.drop(columns=['Renta', 'Amortizacion'], inplace=True)
+    df_pays = cf.join(df_pays.set_index('Fecha de pago'), on='Fecha de pago', lsuffix=f'{ticker}') 
+    df_pays.fillna(0, inplace=True)
+    df_pays['Total'] = df_pays.Total + df_pays[f'Total{ticker}']
+    df_pays.drop(columns=[f'Total{ticker}'], inplace=True)
+
+
+import matplotlib.pyplot as plt
+df_pays.set_index('Fecha de pago', inplace=True)
+plt.plot(df_pays.Total, 'x-')
+plt.show()
