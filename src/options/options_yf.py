@@ -4,6 +4,7 @@ import yfinance as yf
 import matplotlib.pyplot as plt
 import numpy as np
 from nelson_siegel_svensson.calibrate import calibrate_nss_ols
+from matplotlib import cm
 
 
 yield_maturities = np.array([1/12, 2/12, 3/12, 6/12, 1, 2, 3, 5, 7, 10, 20, 30])
@@ -43,6 +44,19 @@ def get_opt_prices(ticker='AAPL', yield_curve=yield_curve_fit(rate_structure)):
                 prices[maturity_in_days][s_k]=  c.lastPrice # c.impliedVolatility
     return prices
 
+def plot_PKT_3D(volSurfacePKT):
+
+    K = np.array(volSurfacePKT.columns, dtype="float64") # strikes
+    T = volSurfacePKT.index  # maturities
+
+    X, Y = np.meshgrid(K,T)
+    Prices = np.array(volSurfacePKT, dtype="float64")
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.plot_surface(X, Y, Prices, cmap=cm.hot, linewidth=0, antialiased=True)
+    # ax.plot_wireframe(X, Y, Z, rstride=40, cstride=40)
+    plt.show()
+
 
 from scipy import interpolate
 if __name__ == '__main__':
@@ -58,12 +72,14 @@ if __name__ == '__main__':
         yinterp = f(xnew)
         prices[maturity] = {xn: yinterp[i] for i, xn in enumerate(xnew)}
         plt.plot(xnew, yinterp, 'x-')
-        plt.show()
+    plt.show()
 
     df_prices = pd.DataFrame(prices)
     df_prices.fillna(0, inplace=True)
+    plot_PKT_3D(df_prices)
     print(df_prices.head(10))
     print(df_prices.tail(10))
+    
 
     for c in df_prices.columns:
        y = df_prices[c].dropna()
