@@ -25,7 +25,8 @@ def yield_curve_fit(rate_structure):
 def get_opt_prices(ticker='AAPL', yield_curve=yield_curve_fit(rate_structure)):
     tckr = yf.Ticker(ticker)
     last_close = tckr.info['regularMarketPrice']
-    prices = {}
+    prices_expir_moneyness = {}
+    prices_expir_strike = {}
     for maturity in tckr.options:
         opt = tckr.option_chain(maturity)
         calls = opt.calls
@@ -34,15 +35,36 @@ def get_opt_prices(ticker='AAPL', yield_curve=yield_curve_fit(rate_structure)):
         if maturity_in_days < 0:
             continue
 
-        prices[maturity_in_days] = {}
+        prices_expir_moneyness[maturity_in_days] = {}
+        prices_expir_strike[maturity_in_days] = {}
+
         for i, c in calls.iterrows():
 
             rT = maturity_in_days * yield_curve(maturity_in_days/365)/365
             s_k = last_close/c.strike
             s_k = np.log(s_k) + rT
             if s_k < .5 and s_k > -.5:
-                prices[maturity_in_days][s_k]=  c.lastPrice # c.impliedVolatility
-    return prices
+                prices_expir_moneyness[maturity_in_days][s_k] =  c.lastPrice # c.impliedVolatility
+                prices_expir_strike[maturity_in_days][c.strike] =  c.lastPrice # c.impliedVolatility
+    return prices_expir_moneyness, prices_expir_strike
+
+
+def prices_properties(prices):
+    N = 0
+    min_strike = 1E6
+    max_strike = -1E6
+
+    for expiration in prices:
+        strike_min = min(prices[expiration].keys())
+        if strike_min < min_strike:
+            min_strike = strike_min
+        strike_max = max(prices[expiration].keys())
+        if strike_max > max_strike:
+            max_strike = strike_max
+        if len(prices[expiration]) > N:
+            N = len(prices[expiration])
+    return len(prices), N, min_strike, max_strike
+
 
 def plot_PKT_3D(volSurfacePKT):
 
@@ -60,21 +82,25 @@ def plot_PKT_3D(volSurfacePKT):
 
 from scipy import interpolate
 if __name__ == '__main__':
-    prices = get_opt_prices()
+    prices_moneyness, prices_strike = get_opt_prices()
+
+    print(prices_strike)
+    print(prices_properties(prices_strike))
+    exit()
 
     xnew = np.linspace(-0.5, 0.5, 60)
-    for maturity in prices:
-        skew = prices[maturity]
+    for maturity in prices_moneyness:
+        skew = prices_moneyness[maturity]
         stk = np.asarray([(k, skew[k]) for k in skew])
         x = stk[:, 0]
         y = stk[:, 1]
         f = interpolate.interp1d(x, y, fill_value='extrapolate', kind='linear')
         yinterp = f(xnew)
-        prices[maturity] = {xn: yinterp[i] for i, xn in enumerate(xnew)}
+        prices_moneyness[maturity] = {xn: yinterp[i] for i, xn in enumerate(xnew)}
         plt.plot(xnew, yinterp, 'x-')
     plt.show()
 
-    df_prices = pd.DataFrame(prices)
+    df_prices = pd.DataFrame(prices_moneyness)
     df_prices.fillna(0, inplace=True)
     plot_PKT_3D(df_prices)
     print(df_prices.head(10))
