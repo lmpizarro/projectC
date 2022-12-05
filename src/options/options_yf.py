@@ -21,6 +21,24 @@ def yield_curve_fit(rate_structure):
 
     return curve_fit
 
+def prices_properties(prices):
+    number_of_strikes = 0
+    min_strike = 1E6
+    max_strike = -1E6
+
+    for expiration in prices:
+        strike_min = min(prices[expiration].keys())
+        if strike_min < min_strike:
+            min_strike = strike_min
+        strike_max = max(prices[expiration].keys())
+        if strike_max > max_strike:
+            max_strike = strike_max
+        if len(prices[expiration]) > number_of_strikes:
+            number_of_strikes = len(prices[expiration])
+    number_of_expirations = len(prices)
+    deltas_strike = 2 * (max_strike - min_strike)
+    return number_of_expirations, number_of_strikes, min_strike, max_strike, deltas_strike
+
 
 def get_opt_prices(ticker='AAPL', yield_curve=yield_curve_fit(rate_structure)):
     tckr = yf.Ticker(ticker)
@@ -46,24 +64,26 @@ def get_opt_prices(ticker='AAPL', yield_curve=yield_curve_fit(rate_structure)):
             if s_k < .5 and s_k > -.5:
                 prices_expir_moneyness[maturity_in_days][s_k] =  c.lastPrice # c.impliedVolatility
                 prices_expir_strike[maturity_in_days][c.strike] =  c.lastPrice # c.impliedVolatility
+
     return prices_expir_moneyness, prices_expir_strike
 
 
-def prices_properties(prices):
-    N = 0
-    min_strike = 1E6
-    max_strike = -1E6
+def get_opt_prices_strike(ticker='AAPL'):
+    tckr = yf.Ticker(ticker)
+    prices_expir_strike = {}
+    for maturity in tckr.options:
+        opt = tckr.option_chain(maturity)
+        calls = opt.calls
+        symbol = calls.iloc[0].contractSymbol
+        maturity_in_days = int((pd.Timestamp(maturity) - pd.Timestamp(datetime.now())).days)
+        if maturity_in_days < 0:
+            continue
 
-    for expiration in prices:
-        strike_min = min(prices[expiration].keys())
-        if strike_min < min_strike:
-            min_strike = strike_min
-        strike_max = max(prices[expiration].keys())
-        if strike_max > max_strike:
-            max_strike = strike_max
-        if len(prices[expiration]) > N:
-            N = len(prices[expiration])
-    return len(prices), N, min_strike, max_strike
+        prices_expir_strike[maturity_in_days] = {}
+
+        for i, c in calls.iterrows():
+            prices_expir_strike[maturity_in_days][c.strike] =  c.lastPrice # c.impliedVolatility
+    return prices_expir_strike
 
 
 def plot_PKT_3D(volSurfacePKT):
@@ -81,13 +101,9 @@ def plot_PKT_3D(volSurfacePKT):
 
 
 from scipy import interpolate
-if __name__ == '__main__':
+
+def moneyness():
     prices_moneyness, prices_strike = get_opt_prices()
-
-    print(prices_strike)
-    print(prices_properties(prices_strike))
-    exit()
-
     xnew = np.linspace(-0.5, 0.5, 60)
     for maturity in prices_moneyness:
         skew = prices_moneyness[maturity]
@@ -111,3 +127,43 @@ if __name__ == '__main__':
        y = df_prices[c].dropna()
        plt.plot(y.index, y)
        plt.show()
+
+if __name__ == '__main__':
+    ticker = 'AAPL'
+    tckr = yf.Ticker(ticker)
+    last_close = tckr.info['regularMarketPrice']
+    limit_inf = last_close * .5
+    limit_sup = 1.5 * last_close
+
+    prices_strike = get_opt_prices_strike()
+    tuple_props = prices_properties(prices_strike)
+
+    xnew = np.arange(tuple_props[2], tuple_props[3], .5)
+
+    key_to_del = []
+    def del_key(d, key):
+        d[key/365] = d[key]
+        del d[key]
+
+    for maturity in prices_strike:
+        skew = prices_strike[maturity]
+        stk = np.asarray([(k, skew[k]) for k in skew])
+        x = stk[:, 0]
+        y = stk[:, 1]
+        f = interpolate.interp1d(x, y, fill_value='extrapolate', kind='linear')
+        yinterp = f(xnew)
+        prices_strike[maturity] = {xn: yinterp[i] for i, xn in enumerate(xnew)}
+        key_to_del.append(maturity)
+
+    [del_key(prices_strike, key) for key in key_to_del]
+
+    df_prices = pd.DataFrame(prices_strike)
+    df_prices = df_prices.loc[(df_prices.index > limit_inf) & (df_prices.index < limit_sup)]
+    df_prices[df_prices < 0] = 0
+    df_prices.fillna(0, inplace=True)
+    plot_PKT_3D(df_prices)
+
+    for c in df_prices.columns:
+       y = df_prices[c].dropna()
+       plt.plot(y.index, y, 'x-')
+    plt.show()
