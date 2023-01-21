@@ -6,10 +6,21 @@ import copy
 import json
 
 urls = {"nasdaq100": "https://www.slickcharts.com/nasdaq100",
-        "dowjones": "https://www.slickcharts.com/dowjones", 
+        "dowjones": "https://www.slickcharts.com/dowjones",
         "sp500": "https://www.slickcharts.com/sp500",
         "sectors": "https://topforeignstocks.com/indices/components-of-the-sp-500-index",
-        "cedears": "https://www.rava.com/cotizaciones/cedears"}
+        "cedears": "https://www.rava.com/cotizaciones/cedears",
+        "bonos": "https://www.rava.com/perfil"
+        }
+
+def scrap_bonos_rava(especie):
+    url = f"{urls['bonos']}/{especie}"
+    resp = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
+    soup = BeautifulSoup(resp.text, features='html.parser')
+    table = soup.find('main').find('perfil-p')
+
+    res = json.loads(table.attrs[':res'])
+    return res
 
 
 def scrap_slick_chart(url, constituents) -> Dict[str, Any]:
@@ -36,7 +47,7 @@ def scrap_cedear_rava():
     resp = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
     soup = BeautifulSoup(resp.text, features='html.parser')
     table = soup.find('main').find('cedears-p')
-    
+
     body = json.loads(table.attrs[':datos'])['body']
     symbolos = []
     for b in body:
@@ -73,7 +84,7 @@ def scrap_finviz(constituents, max_n=10):
 
 def scrap_sp500(folder:str, file_name:str, max_n:int = 10):
     url_sectors = urls['sectors']
-    url_sp500 = urls['sp500'] 
+    url_sp500 = urls['sp500']
 
 
     resp = requests.get(url_sectors, headers={'User-Agent': 'Mozilla/5.0'})
@@ -87,7 +98,7 @@ def scrap_sp500(folder:str, file_name:str, max_n:int = 10):
         ticker = tds[2].text
         name   = tds[1].text
         constituents[ticker] = {'sector': sector, 'name': name}
-    
+
     resp = requests.get(url_sp500, headers={'User-Agent': 'Mozilla/5.0'})
     soup = BeautifulSoup(resp.text, features='lxml')
     table = soup.find('table')
@@ -169,14 +180,14 @@ def filter_df1(folder:str, file_name:str):
             except Exception:
                 pass
         return x
-    
+
     def tr_str(x):
         try:
             x = float(x)
         except Exception:
             pass
         return x
-    
+
     df['Perf YTD'] = df['Perf YTD'].transform(tr_pct)
     df['Perf Year'] = df['Perf Year'].transform(tr_pct)
     df['Change'] = df['Change'].transform(tr_pct)
