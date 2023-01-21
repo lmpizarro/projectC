@@ -1,5 +1,6 @@
 from scrapers import scrap_bonos_rava
 import pandas as pd
+import matplotlib.pyplot as plt
 
 def test():
     res = scrap_bonos_rava('gd41')
@@ -29,14 +30,17 @@ def ratio(year: str = 29):
 
     cierre_gd = hist_gd[['fecha', 'cierre', 'usd_cierre']]
     cierre_al = hist_al[['fecha', 'cierre', 'usd_cierre']]
-    print(cierre_gd)
-    print(cierre_al)
-
     mrg = pd.merge(cierre_al, cierre_gd, on='fecha', suffixes=(f'_al{year}', f'_gd{year}'))
     mrg[f'usd_al{year}'] = mrg[f'cierre_al{year}']/mrg[f'usd_cierre_al{year}']
     mrg[f'usd_gd{year}'] = mrg[f'cierre_gd{year}']/mrg[f'usd_cierre_gd{year}']
     mrg[f'ratio_{year}'] = mrg[f'cierre_gd{year}']/mrg[f'cierre_al{year}']
     mrg[f'ratio_usd_{year}'] = mrg[f'usd_cierre_gd{year}']/mrg[f'usd_cierre_al{year}']
-    print(mrg)
 
+    mrg[f'ewm_ratio_{year}'] = mrg[f'ratio_{year}'].ewm(alpha=0.1).mean()
+    print(mrg[f'ratio_{year}'].mean())
+
+    print(mrg.iloc[-1][f'ratio_{year}'])
+
+    plt.plot(mrg[f'ratio_{year}'] - mrg[f'ewm_ratio_{year}'])
+    plt.show()
 ratio(41)
