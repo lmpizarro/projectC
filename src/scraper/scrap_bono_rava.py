@@ -13,10 +13,17 @@ def scrap_bonos_rava(especie):
     soup = BeautifulSoup(resp.text, features='html.parser')
     table = soup.find('main').find('perfil-p')
     
-    coti_hist = json.loads(table.attrs[':res'])['coti_hist']
+    res = json.loads(table.attrs[':res'])
+    coti_hist = res['coti_hist']
     for e in coti_hist:
         print(e)
+    
+    flujo = res['flujofondos']
+    print(flujo)
+    print(res.keys())
 
-scrap_bonos_rava('gd41')
+    print(res['cotizaciones'])
+
+scrap_bonos_rava('gd41d')
 
 
