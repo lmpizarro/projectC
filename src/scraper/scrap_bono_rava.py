@@ -27,9 +27,16 @@ def ratio(year: str = 29):
     hist_gd = coti_hist(scrap_bonos_rava(f'gd{year}'))
     hist_al = coti_hist(scrap_bonos_rava(f'al{year}'))
 
-    cierre_gd = hist_gd[['fecha', 'timestamp', 'cierre', 'usd_cierre']]
-    cierre_al = hist_al[['fecha', 'timestamp', 'cierre', 'usd_cierre']]
+    cierre_gd = hist_gd[['fecha', 'cierre', 'usd_cierre']]
+    cierre_al = hist_al[['fecha', 'cierre', 'usd_cierre']]
     print(cierre_gd)
     print(cierre_al)
 
-ratio()
+    mrg = pd.merge(cierre_al, cierre_gd, on='fecha', suffixes=(f'_al{year}', f'_gd{year}'))
+    mrg[f'usd_al{year}'] = mrg[f'cierre_al{year}']/mrg[f'usd_cierre_al{year}']
+    mrg[f'usd_gd{year}'] = mrg[f'cierre_gd{year}']/mrg[f'usd_cierre_gd{year}']
+    mrg[f'ratio_{year}'] = mrg[f'cierre_gd{year}']/mrg[f'cierre_al{year}']
+    mrg[f'ratio_usd_{year}'] = mrg[f'usd_cierre_gd{year}']/mrg[f'usd_cierre_al{year}']
+    print(mrg)
+
+ratio(41)
