@@ -84,6 +84,7 @@ class Bono:
         self.tir: float = None
         self.duration = None
         self.laminas:int = laminas
+        self.precio: float = 0.0
 
     def dict(self):
         return self.__dict__
@@ -98,6 +99,16 @@ class Bono:
 
             return True
         return False
+
+    def compound(self):
+        filtered = self.cash_flow[1:-1]
+        laminas = self.laminas
+
+        for index, row in filtered.iterrows():
+            new_laminas = int(laminas * row.cupon / self.precio)
+            laminas += new_laminas
+            print(self.precio, row.cupon, laminas, new_laminas, laminas * self.precio)
+
 
     def invest(self, compound=False):
         if not compound:
@@ -117,6 +128,7 @@ def bono_pesos(ticker: str = 'PARP'):
         if len(flujo) > 0:
             flujo = cash_flow(flujo)
             bono.cash_flow = flujo
+            bono.precio = -1 * bono.cash_flow.iloc[0].cupon
     except:
         pass
 
@@ -146,10 +158,11 @@ def test_pesos():
             return
         plt.show()
 
-        print(bono.dict())
-        bono.invest()
+        print(bono.cash_flow)
+        # bono.invest(compound=False)
 
-        print(bono.dict())
+        bono.compound()
+
 
 
 test_pesos()
