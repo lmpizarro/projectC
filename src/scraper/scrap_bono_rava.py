@@ -3,18 +3,19 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
 
+
+
 def cash_flow(flujo, laminas: int = 1000):
     today = datetime.now()
     flujo.fillna(0, inplace=True)
     flujo['fecha'] = pd.to_datetime(flujo['fecha'],format= '%Y-%m-%d')
-    flujo[['cupon', 'renta', 'amortizacion']] = laminas * flujo[['cupon', 'renta', 'amortizacion']]
     flujo['acumulado'] = flujo.cupon.cumsum()
     flujo_inicial = -flujo.acumulado.iloc[0]
     flujo['cupon_precio'] = flujo.cupon / flujo_inicial
     flujo['acumu_precio'] = flujo.acumulado / flujo_inicial
     flujo['dias_cupon'] = (flujo.fecha - today).dt.days
 
-    print(flujo)
+    return flujo
 
 def test():
     res = scrap_bonos_rava('gd29')
@@ -74,46 +75,81 @@ def bonos_dolar():
     for y in [29, 30, 35, 38, 41]:
         ratio_bond_usd(y)
 
+class Bono:
+
+    def __init__(self, ticker: str = None, laminas: int = 100) -> None:
+        self.ticker: str = ticker
+        self.history: pd.DataFrame = None
+        self.cash_flow: pd.DataFrame = None
+        self.tir: float = None
+        self.duration = None
+        self.laminas:int = laminas
+
+    def dict(self):
+        return self.__dict__
+
+    def __str__(self) -> str:
+        return (f'{self.ticker} {self.tir} {self.duration}')
+
+    def has_history(self):
+        if 'usd_cierre' in self.history and \
+            'cierre' in self.history and \
+            not self.history.empty:
+
+            return True
+        return False
+
+    def invest(self, compound=False):
+        if not compound:
+            self.cash_flow[['cupon', 'renta', 'amortizacion']] = \
+                        self.laminas * self.cash_flow[['cupon', 'renta', 'amortizacion']]
+
 def bono_pesos(ticker: str = 'PARP'):
+    bono = Bono(ticker)
+
     res = scrap_bonos_rava(ticker)
     hist_gd = coti_hist(res)
-    
+
+    bono.history = hist_gd
+
     try:
         flujo = pd.DataFrame(res['flujofondos']['flujofondos'])
         if len(flujo) > 0:
-            cash_flow(flujo)
+            flujo = cash_flow(flujo)
+            bono.cash_flow = flujo
     except:
         pass
 
-
-    tir = 0; duration = 0
     try:
-        tir = (res['flujofondos']['tir'])
+        bono.tir = (res['flujofondos']['tir'])
     except:
         pass
     try:
-        duration = (res['flujofondos']['duration'])
+        bono.duration = (res['flujofondos']['duration'])
     except:
         pass
 
-    print(f'{ticker} {tir} {duration}')
-    plt.title(ticker)
-    try:
-        if 'usd_cierre' in hist_gd:
-            plt.plot(hist_gd.usd_cierre)
-        else:
-            plt.plot(hist_gd.cierre)
-    except:
-        return
-
-    plt.show()
+    return bono
 
 
 def test_pesos():
     duales = ['TDJ23', 'TDL23', 'TDS23', 'TV23', 'TV24']
     txs =  ['TX23', 'T2X3', 'TX24', 'T2X4', 'TX25', 'TX26', 'TX28']
     en_pesos = ['CUAP', 'DICP', 'DIP0', 'PARP', 'BA37D', 'BDC24', 'BDC28', 'PBA25', 'TO26', 'TO23']
-    for ticker in en_pesos:
-        bono_pesos(ticker)
+    for ticker in ['TO26']:
+        bono = bono_pesos(ticker)
+
+        plt.title(bono.ticker)
+        if bono.has_history():
+            plt.plot(bono.history.usd_cierre)
+        else:
+            return
+        plt.show()
+
+        print(bono.dict())
+        bono.invest()
+
+        print(bono.dict())
+
 
 test_pesos()
