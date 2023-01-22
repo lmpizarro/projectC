@@ -77,6 +77,14 @@ def bonos_dolar():
 def bono_pesos(ticker: str = 'PARP'):
     res = scrap_bonos_rava(ticker)
     hist_gd = coti_hist(res)
+    
+    try:
+        flujo = pd.DataFrame(res['flujofondos']['flujofondos'])
+        if len(flujo) > 0:
+            cash_flow(flujo)
+    except:
+        pass
+
 
     tir = 0; duration = 0
     try:
@@ -105,7 +113,7 @@ def test_pesos():
     duales = ['TDJ23', 'TDL23', 'TDS23', 'TV23', 'TV24']
     txs =  ['TX23', 'T2X3', 'TX24', 'T2X4', 'TX25', 'TX26', 'TX28']
     en_pesos = ['CUAP', 'DICP', 'DIP0', 'PARP', 'BA37D', 'BDC24', 'BDC28', 'PBA25', 'TO26', 'TO23']
-    for ticker in duales:
+    for ticker in en_pesos:
         bono_pesos(ticker)
 
-test()
+test_pesos()
