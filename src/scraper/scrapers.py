@@ -10,17 +10,31 @@ urls = {"nasdaq100": "https://www.slickcharts.com/nasdaq100",
         "sp500": "https://www.slickcharts.com/sp500",
         "sectors": "https://topforeignstocks.com/indices/components-of-the-sp-500-index",
         "cedears": "https://www.rava.com/cotizaciones/cedears",
-        "bonos": "https://www.rava.com/perfil"
+        "bonos_rava": "https://www.rava.com/perfil",
+        "bonos_bonistas": "https://bonistas.com/md"
         }
 
 def scrap_bonos_rava(especie):
-    url = f"{urls['bonos']}/{especie}"
+    url = f"{urls['bonos_rava']}/{especie}"
     resp = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
     soup = BeautifulSoup(resp.text, features='html.parser')
     table = soup.find('main').find('perfil-p')
 
     res = json.loads(table.attrs[':res'])
     return res
+
+
+def scrap_bonistas(especie):
+    url = f"{urls['bonos_bonistas']}/{especie}"
+    resp = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
+    soup = BeautifulSoup(resp.text, features='html.parser')
+    divs = soup.find_all('div', {'class': 'col-lg-6 d-none d-lg-block d-xl-block'})
+
+    dfs = pd.read_html(url)
+
+    for df in dfs:
+        print(df)
+
 
 
 def scrap_slick_chart(url, constituents) -> Dict[str, Any]:
@@ -243,7 +257,7 @@ def cedear_not_in_sp500(max_n=10):
     df = pd.DataFrame.from_dict(scrap_finviz(cedear_not_sp500, max_n=max_n), orient='index')
     return df
 
-if __name__ == '__main__':
+def test01():
     main()
     ce = scrap_cedear_rava()
     print(len(ce))
@@ -254,3 +268,6 @@ if __name__ == '__main__':
     c = cedear_not_in_sp500(max_n=10)
 
     print(c.tail())
+
+if __name__ == '__main__':
+    scrap_bonistas('BDC28')
