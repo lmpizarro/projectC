@@ -11,7 +11,7 @@ urls = {"nasdaq100": "https://www.slickcharts.com/nasdaq100",
         "sectors": "https://topforeignstocks.com/indices/components-of-the-sp-500-index",
         "cedears": "https://www.rava.com/cotizaciones/cedears",
         "bonos_rava": "https://www.rava.com/perfil",
-        "bonos_bonistas": "https://bonistas.com/md"
+        "bonistas_com": "https://bonistas.com"
         }
 
 def scrap_bonos_rava(especie):
@@ -24,16 +24,39 @@ def scrap_bonos_rava(especie):
     return res
 
 
-def scrap_bonistas(especie):
-    url = f"{urls['bonos_bonistas']}/{especie}"
-    resp = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
-    soup = BeautifulSoup(resp.text, features='html.parser')
-    divs = soup.find_all('div', {'class': 'col-lg-6 d-none d-lg-block d-xl-block'})
-
+def scrap_bonistas_ticker(especie):
+    url = f"{urls['bonistas_com']}/md/{especie}"
+    """
+       https://towardsdatascience.com/a-guide-to-scraping-html-tables-with-pandas-and-beautifulsoup-7fc24c331cf7
+    """
     dfs = pd.read_html(url)
 
     for df in dfs:
         print(df)
+
+def scrap_bonistas_main():
+    url = f"{urls['bonistas_com']}"
+
+    dfs = pd.read_html(url)
+    maps = {0:'tasa fija badlar',
+            2:'CER',
+            4:'USD',
+            6: 'CABLE',
+            8: 'LEDES',
+            10: 'LECER',
+            12: 'MEP CCL ARG',
+            13: 'MEP CCL NY'}
+
+    for index, df in enumerate(dfs):
+        if index < 11 and not (index % 2):
+            print(f'----------{maps[index].upper()}--------')
+            print(df)
+            print('..................')
+        elif index > 11 and index <= 13:
+            print(f'----------{maps[index].upper()}--------')
+            print(df)
+            print('..................')
+
 
 
 
@@ -270,4 +293,4 @@ def test01():
     print(c.tail())
 
 if __name__ == '__main__':
-    scrap_bonistas('BDC28')
+    scrap_bonistas_main()
