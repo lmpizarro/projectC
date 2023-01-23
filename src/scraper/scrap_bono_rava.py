@@ -110,7 +110,7 @@ class Bono:
                         'laminas_adic': 0,
                         'pago': 0,
                         'laminas': self.laminas,
-                        'valor': row.cupon * laminas
+                        'acumulado': row.cupon * laminas
         }
         composicion.append(new_flux)
         for index, row in filtered.iterrows():
@@ -119,7 +119,7 @@ class Bono:
                         'laminas_adic': laminas_adic,
                         'pago': laminas * row.cupon,
                         'laminas': laminas + laminas_adic,
-                        'valor': (laminas + laminas_adic) * self.precio}
+                        'acumulado': -(laminas + laminas_adic) * self.precio}
             laminas += laminas_adic
             composicion.append(new_flux)
         row = self.cash_flow.iloc[-1]
@@ -127,7 +127,7 @@ class Bono:
                     'laminas_adic': 0,
                     'pago': row.cupon * laminas,
                     'laminas': laminas,
-                    'valor': row.cupon * laminas
+                    'acumulado': row.cupon * laminas
                     }
         composicion.append(new_flux)
 
