@@ -106,30 +106,27 @@ class Bono:
 
         composicion = []
         row = self.cash_flow.iloc[0]
-        new_flux = {'fecha': row.fecha,
+        composicion.append({'fecha': row.fecha,
                         'laminas_adic': 0,
                         'pago': 0,
                         'laminas': self.laminas,
                         'acumulado': row.cupon * laminas
-        }
-        composicion.append(new_flux)
+                        })
         for index, row in filtered.iterrows():
             laminas_adic = int(laminas * row.cupon / self.precio)
-            new_flux = {'fecha': row.fecha,
+            composicion.append({'fecha': row.fecha,
                         'laminas_adic': laminas_adic,
                         'pago': laminas * row.cupon,
                         'laminas': laminas + laminas_adic,
-                        'acumulado': -(laminas + laminas_adic) * self.precio}
+                        'acumulado': -(laminas + laminas_adic) * self.precio})
             laminas += laminas_adic
-            composicion.append(new_flux)
         row = self.cash_flow.iloc[-1]
-        new_flux = {'fecha': row.fecha,
+        composicion.append({'fecha': row.fecha,
                     'laminas_adic': 0,
                     'pago': row.cupon * laminas,
                     'laminas': laminas,
                     'acumulado': row.cupon * laminas
-                    }
-        composicion.append(new_flux)
+                    })
 
         composicion = pd.DataFrame(composicion)
         self.cash_flow[['cupon', 'renta', 'amortizacion']] = \
