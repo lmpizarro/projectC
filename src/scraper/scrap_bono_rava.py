@@ -105,23 +105,38 @@ class Bono:
         laminas = self.laminas
 
         composicion = []
+        row = self.cash_flow.iloc[0]
+        new_flux = {'fecha': row.fecha,
+                        'laminas_adic': 0,
+                        'pago': 0,
+                        'laminas': self.laminas,
+                        'valor': row.cupon * laminas
+        }
+        composicion.append(new_flux)
         for index, row in filtered.iterrows():
             laminas_adic = int(laminas * row.cupon / self.precio)
             new_flux = {'fecha': row.fecha,
                         'laminas_adic': laminas_adic,
                         'pago': laminas * row.cupon,
                         'laminas': laminas + laminas_adic,
-                        'total': (laminas + laminas_adic) * self.precio}
+                        'valor': (laminas + laminas_adic) * self.precio}
             laminas += laminas_adic
             composicion.append(new_flux)
         row = self.cash_flow.iloc[-1]
         new_flux = {'fecha': row.fecha,
-                        'laminas_adic': 0,
-                        'pago': row.cupon * laminas,
-                        'laminas': laminas,
-                        'total': row.cupon * laminas
-                        }
+                    'laminas_adic': 0,
+                    'pago': row.cupon * laminas,
+                    'laminas': laminas,
+                    'valor': row.cupon * laminas
+                    }
         composicion.append(new_flux)
+
+        composicion = pd.DataFrame(composicion)
+        self.cash_flow[['cupon', 'renta', 'amortizacion']] = \
+                    self.laminas * self.cash_flow[['cupon', 'renta', 'amortizacion']]
+        self.cash_flow.acumulado = self.cash_flow.cupon.cumsum()
+        mrg = pd.merge(self.cash_flow, composicion, on='fecha', suffixes=(f'_cf', f'_comp'))
+        print(mrg)
 
 
 
@@ -129,6 +144,7 @@ class Bono:
         if not compound:
             self.cash_flow[['cupon', 'renta', 'amortizacion']] = \
                         self.laminas * self.cash_flow[['cupon', 'renta', 'amortizacion']]
+            self.cash_flow.acumulado = self.cash_flow.cupon.cumsum()
         else:
             self.compound()
 
