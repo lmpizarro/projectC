@@ -38,6 +38,7 @@ def scrap_bonistas_main():
     url = f"{urls['bonistas_com']}"
 
     dfs = pd.read_html(url)
+    tickers_index = [0, 2, 4, 8, 10]
     maps = {0:'tasa fija badlar',
             2:'CER',
             4:'USD',
@@ -46,18 +47,23 @@ def scrap_bonistas_main():
             10: 'LECER',
             12: 'MEP CCL ARG',
             13: 'MEP CCL NY'}
-
+    tickers = []
+    bonos = {}
     for index, df in enumerate(dfs):
         if index < 11 and not (index % 2):
-            print(f'----------{maps[index].upper()}--------')
-            print(df)
-            print('..................')
+            bonos[index] = df
+            if index in tickers_index:
+                tickers.extend(list(df.Ticker))
         elif index > 11 and index <= 13:
-            print(f'----------{maps[index].upper()}--------')
-            print(df)
-            print('..................')
+            bonos[index] = df
+            if index in tickers_index:
+                tickers.extend(list(df.Ticker))
 
+    for index in bonos:
+        print(f'-- {index} ---------- {maps[index].upper()} --------')
+        print(bonos[index])
 
+    print(tickers)
 
 
 def scrap_slick_chart(url, constituents) -> Dict[str, Any]:
