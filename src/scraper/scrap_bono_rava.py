@@ -104,10 +104,26 @@ class Bono:
         filtered = self.cash_flow[1:-1]
         laminas = self.laminas
 
+        composicion = []
         for index, row in filtered.iterrows():
-            new_laminas = int(laminas * row.cupon / self.precio)
-            laminas += new_laminas
-            print(self.precio, row.cupon, laminas, new_laminas, laminas * self.precio)
+            laminas_adic = int(laminas * row.cupon / self.precio)
+            new_flux = {'fecha': row.fecha,
+                        'laminas_adic': laminas_adic,
+                        'pago': laminas_adic * self.precio,
+                        'laminas': laminas + laminas_adic,
+                        'total': (laminas + laminas_adic) * self.precio}
+            laminas += laminas_adic
+            composicion.append(new_flux)
+        row = self.cash_flow.iloc[-1]
+        new_flux = {'fecha': row.fecha,
+                        'laminas_adic': 0,
+                        'pago': row.cupon * laminas,
+                        'laminas': laminas,
+                        'total': row.cupon * laminas
+                        }
+        composicion.append(new_flux)
+        print(composicion)
+
 
 
     def invest(self, compound=False):
