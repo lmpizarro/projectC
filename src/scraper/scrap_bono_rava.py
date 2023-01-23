@@ -109,7 +109,7 @@ class Bono:
             laminas_adic = int(laminas * row.cupon / self.precio)
             new_flux = {'fecha': row.fecha,
                         'laminas_adic': laminas_adic,
-                        'pago': laminas_adic * self.precio,
+                        'pago': laminas * row.cupon,
                         'laminas': laminas + laminas_adic,
                         'total': (laminas + laminas_adic) * self.precio}
             laminas += laminas_adic
@@ -122,7 +122,6 @@ class Bono:
                         'total': row.cupon * laminas
                         }
         composicion.append(new_flux)
-        print(composicion)
 
 
 
@@ -130,6 +129,8 @@ class Bono:
         if not compound:
             self.cash_flow[['cupon', 'renta', 'amortizacion']] = \
                         self.laminas * self.cash_flow[['cupon', 'renta', 'amortizacion']]
+        else:
+            self.compound()
 
 def bono_pesos(ticker: str = 'PARP'):
     bono = Bono(ticker)
