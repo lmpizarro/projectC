@@ -89,8 +89,11 @@ class Bono:
     def dict(self):
         return self.__dict__
 
+    def total(self):
+        return self.laminas * self.precio
+
     def __str__(self) -> str:
-        return (f'{self.ticker} {self.tir} {self.duration}')
+        return (f'{self.ticker} tir {self.tir} dur {self.duration} precio {self.precio} lam {self.laminas} tot {self.total()}')
 
     def has_history(self):
         if 'usd_cierre' in self.history and \
@@ -133,7 +136,8 @@ class Bono:
                     self.laminas * self.cash_flow[['cupon', 'renta', 'amortizacion']]
         self.cash_flow.acumulado = self.cash_flow.cupon.cumsum()
         mrg = pd.merge(self.cash_flow, composicion, on='fecha', suffixes=(f'_cf', f'_comp'))
-        print(mrg)
+        
+        return mrg
 
 
 
@@ -145,10 +149,12 @@ class Bono:
         else:
             self.compound()
 
-def bono_pesos(ticker: str = 'PARP'):
-    bono = Bono(ticker)
 
-    res = scrap_bonos_rava(ticker)
+def bono_fluxs(**data):
+
+    bono = Bono(data['ticker'], data['laminas'])
+
+    res = scrap_bonos_rava(data['ticker'])
     hist_gd = coti_hist(res)
 
     bono.history = hist_gd
@@ -170,29 +176,38 @@ def bono_pesos(ticker: str = 'PARP'):
         bono.duration = (res['flujofondos']['duration'])
     except:
         pass
-
     return bono
 
-
+DRAW = False
 def test_pesos():
     duales = ['TDJ23', 'TDL23', 'TDS23', 'TV23', 'TV24']
     txs =  ['TX23', 'T2X3', 'TX24', 'T2X4', 'TX25', 'TX26', 'TX28']
-    en_pesos = ['CUAP', 'DICP', 'DIP0', 'PARP', 'BA37D', 'BDC24', 'BDC28', 'PBA25', 'TO26', 'TO23']
-    for ticker in ['TO26']:
-        bono = bono_pesos(ticker)
+    en_pesos = [('CUAP', 34), ('DICP', 34), ('DIP0', 34), ('PARP', 340),] 
+    en_dolar = [('AL41', 31+14), ('AL29', 135+181+27), ('AE38', 38 + 22), ('AL30', 33 + 20)] 
+    tasa_var = ['BA37D', 'BDC24', 'BDC28', 'PBA25', 'TO26', 'TO23']
+    total = 0
+    duration = 0
+    for ticker in en_dolar:
+        bono = bono_fluxs(ticker=ticker[0], laminas=ticker[1])
 
-        plt.title(bono.ticker)
-        if bono.has_history():
-            plt.plot(bono.history.usd_cierre)
-        else:
-            return
-        plt.show()
+        if DRAW:
+            plt.title(bono.ticker)
+            if bono.has_history():
+                plt.plot(bono.history.usd_cierre)
+            else:
+                return
+            plt.show()
 
-        print(bono.cash_flow)
+        # print(bono.cash_flow)
         # bono.invest(compound=False)
-
         bono.compound()
+        total += bono.total()
+        duration += bono.total() * bono.duration
+        print(bono)
+    print(total, duration / total)
 
 
 
+# bonos_dolar()
 test_pesos()
+
