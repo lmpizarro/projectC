@@ -15,6 +15,10 @@ s31Y3 = {"precio": -82.97, "finish": "2023-05-31"}
 s30J3 = {"precio": -77.75, "finish": "2023-06-30"}
 
 letras = [s31m3, s28a3, s31Y3, s30J3]
+
+def stringToDate(date: str):
+    return datetime.date(datetime.strptime(date, "%Y-%m-%d"))
+
 def Irr(letra: dict) ->float:
     return math.pow(-100 / letra["precio"], 1/ letra["T"]) - 1
 
@@ -23,7 +27,7 @@ def Rate(letra)->float:
 
 def Escentials(letra):
     begin = letra["Begin"]
-    finish = datetime.date(datetime.strptime(letra["finish"], "%Y-%m-%d"))
+    finish = stringToDate(letra["finish"])
     letra['T'] = (finish - begin).days / 365
     letra["Rate"] = Rate(letra)
     letra["Irr"] = Irr(letra)
@@ -33,22 +37,25 @@ def ForwardRate(letra1, letra2):
     r2 = 1 + letra2["Irr"] * letra2["T"]
     r1 = 1 + letra1["Irr"] * letra1["T"]
     den = letra2["T"] - letra1["T"]
-
     return (r2/r1 - 1) / den
 
-pagos = {}
-def main():
-    begin = datetime.date(datetime.strptime("2023-03-07", "%Y-%m-%d"))
+def createPagos(inversionInicial: float, begin: str):
+    begin = stringToDate(begin)
 
-    C0 = 100000
-    pagos["T0"] = [-C0]
-    Ci = C0 / 4
+    pagos = {}
+
+    pagos["T0"] = [-inversionInicial]
+    Ci = inversionInicial / 4
     for i, letra in enumerate(letras):
         letra["Begin"] = begin
         Escentials(letra)
         pagos[f'T{i+1}'] = [Ci * (1 + letra["Rate"])]
 
+    return pagos
 
+def main():
+
+    pagos = createPagos(100000, "2023-03-07")
     for i in range(1, len(letras)):
         keyT = f"T{i}"
         divisor = len(letras) - i
