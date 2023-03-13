@@ -26,6 +26,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import collections
 
+"""
+https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_yield_curve&field_tdr_date_value_month=202212
+
+https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics
+
+"""
 
 "https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics"
 columns = ['1 Mo', '2 Mo', '4 Mo', '3 Mo', '6 Mo', '1 Yr', '2 Yr', '3 Yr', '5 Yr', '7 Yr', '10 Yr', '20 Yr', '30 Yr']

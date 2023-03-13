@@ -56,9 +56,9 @@ def ratio_bond_usd(year: str = 29):
     mrg[f'z_signal_{year}'] = mrg[f'ratio_{year}'] - mrg[f'ewm_ratio_{year}']
     mrg[f'ewm_z_signal_{year}'] = mrg[f'z_signal_{year}'].ewm(alpha=0.25).mean()
 
-    print(mrg[f'ratio_{year}'].mean())
+    print(f"ratio {year} mean", mrg[f'ratio_{year}'].mean())
     st_dev = mrg[f'z_signal_{year}'].std()
-    print(mrg.iloc[-1][f'ratio_{year}'])
+    print(f"ratio last ", mrg.iloc[-1][f'ratio_{year}'])
 
     plt.title(f'g_{year}:al_{year}')
     plt.plot(mrg[f'z_signal_{year}'])
@@ -71,7 +71,7 @@ def ratio_bond_usd(year: str = 29):
     plt.axhline(y=-1.5*st_dev, color='y', linestyle='-')
     plt.show()
 
-def bonos_dolar():
+def ratios_bonos_dolar():
     for y in [29, 30, 35, 38, 41]:
         ratio_bond_usd(y)
 
@@ -184,10 +184,12 @@ def test_pesos():
     txs =  ['TX23', 'T2X3', 'TX24', 'T2X4', 'TX25', 'TX26', 'TX28']
     en_pesos = [('CUAP', 34), ('DICP', 34), ('DIP0', 34), ('PARP', 340),] 
     en_dolar = [('AL41', 31+14), ('AL29', 135+181+27), ('AE38', 38 + 22), ('AL30', 33 + 20)] 
-    tasa_var = ['BA37D', 'BDC24', 'BDC28', 'PBA25', 'TO26', 'TO23']
+    tasa_var = ['BA37D', 'BDC24', 'BDC28', 'PBA25']
+    tasa_vat = ['TO26', 'TO23']
     total = 0
     duration = 0
-    for ticker in en_dolar:
+    for ticker in txs:
+        print(ticker)
         bono = bono_fluxs(ticker=ticker[0], laminas=ticker[1])
 
         if DRAW:
@@ -208,6 +210,6 @@ def test_pesos():
 
 
 
-# bonos_dolar()
+# ratios_bonos_dolar()
 test_pesos()
 

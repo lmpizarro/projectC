@@ -157,6 +157,9 @@ def test_others():
     plt.plot(rs, modelPoly(rs), color='purple')
     plt.show()
 
+    plt.scatter(rss, Fit.monoExp(rss, m,t,b))
+    plt.show()
+
     r1 = .2
     Dr = ONE_BPS
     r2 =  r1 + Dr
