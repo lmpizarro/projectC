@@ -1,4 +1,4 @@
-import requests
+import requests 
 import pickle
 from bs4 import BeautifulSoup
 import pandas as pd
@@ -24,7 +24,7 @@ bonos = {
             }
 
 
-nombre_bonos = {'GD' :[30,35,38,41,46]}
+nombre_bonos = {'GD' :[30,35,38,41,46], 'BA':['37D']}
 
 def process_csv(nombre_bonos):
     for tipo in nombre_bonos:
@@ -34,8 +34,10 @@ def process_csv(nombre_bonos):
             bono = {}
             pagos = []
             for row in df_35.iterrows():
-                fecha = row[1]["Fecha de pago"].split('/')
-                fecha = '/'.join([fecha[2], fecha[1], fecha[0][2:]])
+                splited = row[1]["Fecha de pago"].split('/')
+                fecha = '/'.join([splited[2], splited[1], splited[0][2:]])
+                if anio == '37D':
+                    fecha = '/'.join([splited[0], splited[1], splited[2][2:]])
                 renta = row[1]["Renta"]
                 amort = row[1]["Amortización"]
                 pagos.append((fecha, renta, amort))
@@ -59,6 +61,8 @@ def process_csv(nombre_bonos):
 
     with open('bonos.pkl', 'wb') as fp:
         pickle.dump(bonos, fp)
+
+# process_csv(nombre_bonos)
 
 def scrap_bonos_rava():
     url = "https://www.rava.com/cotizaciones/bonos"
@@ -128,8 +132,8 @@ if __name__ == '__main__':
     tickers = ['AL29D', 'AL30D', 'AE38D', 'AL41D', 'AL35D', 'GD29D', 'GD30D', 'GD46D', 'GD38D', 'GD35D', 'GD41D']
 
     print('tkr', '  precio', '  tir', '  m_dur', '  cash', '  amort', '  cupon')
+    close_day = scrap_bonos_rava()
     for ticker in tickers:
-        close_day = scrap_bonos_rava()
         price = float(close_day[ticker]['ultimo'])
 
 
@@ -142,6 +146,8 @@ if __name__ == '__main__':
         total = total_amort + total_cupo
 
         duration = m_duration(df, tir_)
+        qP = 100*df.iloc[0].tail()['CUPÓN'] / price
         print(f'{ticker},  {round(price,2)},  {round(tir_, 2)},  {round(duration, 2)},  ' 
-              f'{round(total,2)},  {round(total_amort,2)},  {round(total_cupo,2)}')
-    
+              f'{round(total,2)},  {round(total_amort,2)},  {round(total_cupo,2)} {round(qP, 2)}')
+  
+

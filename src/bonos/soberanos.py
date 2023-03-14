@@ -61,22 +61,23 @@ if __name__ == '__main__':
     with open('bonos.pkl', 'rb') as fp:
         bonos = pickle.load(fp)
 
+    print(bonos.keys())
     for k in bonos:
 
        today = date.today()
        total_amortizacion, total_renta, _ = get_nominals(bonos[k], today)
        total_pago = total_amortizacion + total_renta
 
-       print(k, round(total_amortizacion, 2), round(total_renta, 2), round(total_pago, 2))
+       print("totales ", k, round(total_amortizacion, 2), round(total_renta, 2), round(total_pago, 2))
 
     ticker = 'GD30'
     amortizacion, renta, pair_pagos = get_nominals(bonos[ticker], today)
     renta_pct = renta / amortizacion
 
     delta_r = 0.01
-    print(renta_pct-delta_r, valor_bono_disc(pair_pagos, renta_pct-delta_r))
-    print(renta_pct, valor_bono_disc(pair_pagos, renta_pct))
-    print(renta_pct+delta_r, valor_bono_disc(pair_pagos, renta_pct+delta_r))
+    print("-delta ", renta_pct-delta_r, valor_bono_disc(pair_pagos, renta_pct-delta_r))
+    print("zero ", renta_pct, valor_bono_disc(pair_pagos, renta_pct))
+    print("+delta ", renta_pct+delta_r, valor_bono_disc(pair_pagos, renta_pct+delta_r))
 
     rs = np.linspace(0.0001, 1.0, 100)
     vs = np.zeros(100)
