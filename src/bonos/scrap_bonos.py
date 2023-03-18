@@ -120,13 +120,14 @@ def scrap_cash_flows(ticker):
     csv_file = StringIO(csv)
     df = pd.read_csv(csv_file)
     
-    today = [pd.Timestamp(date.today())] * len(df)
-    to_day = pd.Series(today)
+    return df
+
+def calc_ttm(df_cash_flows, ref_day):
+    refday = pd.Series([pd.Timestamp(ref_day)] * len(df))
     df['FECHA'] = pd.to_datetime(df['FECHA'])
-    df['T'] = (df['FECHA'] - to_day)
+    df['T'] = (df['FECHA'] - refday)
     df['T'] = df['T'].dt.days.astype('int16') / DAYS_IN_A_YEAR
 
-    return df
 
 if __name__ == '__main__':
     tickers = ['AL29D', 'AL30D', 'AE38D', 'AL41D', 'AL35D', 'GD29D', 'GD30D', 'GD46D', 'GD38D', 'GD35D', 'GD41D']
@@ -138,6 +139,9 @@ if __name__ == '__main__':
 
 
         df = scrap_cash_flows(ticker)
+        ref_day = date.today()
+        calc_ttm(df, ref_day)
+        print(df.tail())
         tir_ = ytm_discrete(df, price)
 
         total_amort = df['AMORTIZACIÓN'].sum()
