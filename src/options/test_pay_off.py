@@ -37,7 +37,7 @@ from payoff.strangle import LongStrangle, ShortStrangle
 opt1 = Option(7000,.3,10,.1,.1, 'P', 25)
 opt2 = Option(7800,.3,10,.1,.1, 'C', 25)
 
-ls = LongStrangle(options=[opt1, opt2])
+ls = ShortStrangle(options=[opt1, opt2])
 plt.plot(ls.prices, ls.pay_off())
 plt.show()
 

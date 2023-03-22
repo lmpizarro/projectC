@@ -28,8 +28,8 @@ class LongStrangle(PayOff):
         return super().set_prices()
 
 class ShortStrangle(LongStrangle):
-    def __init__(self, K1, K2, P) -> None:
-        super().__init__(K1, K2, P)
+    def __init__(self, options: List[Option]) -> None:
+        super().__init__(options)
 
     def pay_off(self):
         return - super().pay_off()
