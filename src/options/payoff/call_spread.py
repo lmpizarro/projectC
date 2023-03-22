@@ -2,8 +2,7 @@ from typing import List
 
 import numpy as np
 
-from .pay_off import PayOff, Option
-
+from .pay_off import PayOff, Option, OptionError
 
 
 class BullCallSpread(PayOff):

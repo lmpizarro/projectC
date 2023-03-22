@@ -6,11 +6,17 @@ from .pay_off import PayOff, Option, OptionError
 
 
 class LongStrangle(PayOff):
-    def __init__(self, K1, K2, P) -> None:
-        if K1 >= K2:
+    def __init__(self, options: List[Option]) -> None:
+        super().__init__(options)
+
+        if self.options[0].K >= self.options[1].K:
             raise OptionError("K2 mut be GT K1")
-        self.K2 = K2
-        self.K1 = K1
+        self.K2 = options[1].K
+        self.K1 = options[0].K
+
+        self.set_prices()
+
+    def set_prices(self):
         self.prices = np.linspace(.5*K1, 1.5*K2, 100)
 
     def pay_off(self):
@@ -18,11 +24,15 @@ class LongStrangle(PayOff):
         b = np.where(self.prices < self.K1, -self.prices + self.K1, a)
         return b
 
+    def set_prices(self):
+        return super().set_prices()
+
 class ShortStrangle(LongStrangle):
     def __init__(self, K1, K2, P) -> None:
         super().__init__(K1, K2, P)
 
     def pay_off(self):
         return - super().pay_off()
+
 
 
