@@ -51,7 +51,7 @@ def short_call(op:Option):
 
 
 po_long_straddle, s1 = long_strangle(Option(50, 5), Option(100,5))
-po_bull_c_spread, s1 = bull_call_spread(Option(50, 2), Option(120,7))
+po_bull_c_spread, s1 = bull_call_spread(Option(100, 2), Option(130,7))
 po_long_call, sc = long_call(Option(50, 5))
 po_short_call, ssc = short_call(Option(75, 5))
 # plt.plot(s1, po_long_straddle)
