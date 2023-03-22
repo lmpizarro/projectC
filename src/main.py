@@ -1,12 +1,10 @@
-from datetime import datetime, timedelta
-from re import A
+from cmath import exp
 import yfinance as yf
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import copy
-from calcs import cumsum
-from denoisers.butter.filter import min_lp, butter
+from denoisers.butter.filter import min_lp
 from plot.ploter import plot_stacked
 from portfolios import (min_ewma_port,
                         equal_weight_port,
@@ -172,94 +170,8 @@ def test_equal_min_weight():
     plt.plot(df_min['returns'].cumsum(), 'g')
     plt.show()
 
-
-def test_options():
-    """
-        https://www.youtube.com/watch?v=o8C6DxZh8dw
-        Simulating the Heston Model with Python | Stochastic Volatility Modelling
-
-        https://www.youtube.com/watch?v=Devm4ElEhGc
-        Stochastic Calculus for Quants | Understanding Geometric Brownian Motion using Itô Calculus
-
-        quantlib heston montecarlo
-        http://gouthamanbalaraman.com/blog/valuing-european-option-heston-model-quantLib.html
-        http://gouthamanbalaraman.com/blog/volatility-smile-heston-model-calibration-quantlib-python.html
-
-        https://nbviewer.org/github/CalebMigosi/code-more/tree/main/EquityOptionsPricing/
-
-        https://calebmigosi.medium.com/build-the-heston-model-from-scratch-part-i-17bde00122a0
-        https://calebmigosi.medium.com/build-the-heston-model-from-scratch-in-python-part-ii-5971b9971cbe
-        https://calebmigosi.medium.com/build-the-heston-model-from-scratch-in-python-part-iii-monte-carlo-pricing-5009c1ba7d29
-
-    """
-    """
-        AAPL220826C00070000
-        symbol = AAPL
-        year = 2022
-        date = 26
-        month = 08
-        C = call
-        00070000 = 70   9999.9999
-    """
-    aapl = yf.Ticker('AAPL')
-    options_dates = aapl.options
-
-    strikes = pd.DataFrame()
-    for d in options_dates:
-        ex_date = datetime.strptime(d, "%Y-%m-%d").date()
-        today = datetime.now().date()
-        time_to_expire = ex_date - today
-
-        calls: pd.DataFrame = aapl.option_chain(d).calls
-        vol_strike = calls[['strike', 'impliedVolatility']]
-        vol_strike = vol_strike.set_index('strike')
-        vol_strike.rename(columns={'impliedVolatility':time_to_expire.days}, inplace=True)
-        print(vol_strike)
-        if strikes.empty:
-            strikes = vol_strike
-        else:
-            strikes = pd.merge(strikes, vol_strike, on='strike')
-
-    strikes.fillna(0, inplace=True)
-    print(calls.keys())
-    print(strikes.tail())
-    plt.plot(strikes.index, strikes[strikes.keys()])
-    plt.show()
-    from matplotlib import cm
-    x = np.array(strikes.columns, dtype="float64")
-    y = strikes.index
-    X,Y = np.meshgrid(x,y)
-    Z = np.array(strikes, dtype="float64")
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.plot_surface(X, Y, Z, cmap=cm.hot, linewidth=0, antialiased=True)
-    # ax.plot_wireframe(X, Y, Z, rstride=40, cstride=40)
-    """
-    https://jakevdp.github.io/PythonDataScienceHandbook/04.12-three-dimensional-plotting.html
-    Understanding the Particle Filter | | Autonomous Navigation, Part 2
-    https://www.youtube.com/watch?v=NrzmH_yerBU
-
-    https://www.youtube.com/watch?v=aUkBa1zMKv4
-    https://www.youtube.com/watch?v=YBeVDxTHiYM
-
-    https://www.youtube.com/watch?v=O-lAJVra1PU
-    Particle Filter Tutorial With MATLAB Part 1: Student Dave
-
-    https://www.youtube.com/watch?v=OM5iXrvUr_o
-    Particle Filter Algorithm
-
-    https://www.youtube.com/watch?v=r-bHqY5gaPw
-    CS 188 Lecture 19: Particle Filtering
-
-    https://particles-sequential-monte-carlo-in-python.readthedocs.io/en/latest/notebooks/basic_tutorial.html
-
-
-    """
-    plt.show()
-
 def heston_model():
     import QuantLib as ql
-    import math
 
     day_count = ql.Actual365Fixed()
     calendar = ql.UnitedStates()
@@ -358,7 +270,7 @@ def heston_model():
                     linewidth=0.1)
     fig.colorbar(surf, shrink=0.5, aspect=5)
 
-    # plt.show()
+    plt.show()
 
     # dummy parameters
     v0 = 0.01; kappa = 0.2; theta = 0.02; rho = -0.75; sigma = 0.5;
@@ -394,7 +306,6 @@ def heston_model():
     print("theta = %f, kappa = %f, sigma = %f, rho = %f, v0 = %f" % (theta, kappa, sigma, rho, v0))
 
     avg = 0.0
-
     print("%15s %15s %15s %20s" % (
         "Strikes", "Market Value",
          "Model Value", "Relative Error (%)"))
@@ -410,8 +321,105 @@ def heston_model():
     print("-"*70)
     print("Average Abs Error (%%) : %5.3f" % (avg))
 
+from scipy.optimize import minimize
+
 if __name__ == '__main__':
-    heston_model()
+    df = download(['SPY', 'DIA'])
+
+    df = returns(['SPY'], df)
+    rets = (100 * df.SPY).to_numpy()
+    # rets = rets[0:30]
+    mu = rets.mean()
+    residuals = rets - mu
+
+    real_var = residuals ** 2
+    theta = residuals.var()
+    sigma = real_var.std()
+    kappa = .5
+    rho = 0
+    v0 = theta
+    expect_var = np.zeros(len(real_var))
+    expect_var[0] = theta
+    print(mu, theta, kappa, sigma)
+
+    def g_exp_var(real_var, kappa, theta, v_0):
+        exp_var = np.zeros(len(real_var))
+        exp_var[0] = np.max(v_0, 0)
+        for i in range(1, len(exp_var)):
+            exp_var[i] = np.max(real_var[i-1] + kappa * (theta - np.max(real_var[i-1],0)),0)
+            if exp_var[i] < 0:
+                exp_var[i] = np.abs(exp_var[i])
+            elif exp_var[i] == 0:
+                exp_var[i] = 0.001
+        return exp_var
+
+    def MLEheston(parameters):
+        theta_, kappa_, sigma_, rho_, v0_ = parameters[0], parameters[1], \
+                    parameters[2], parameters[3], parameters[4]
+
+        """
+            X returns
+            mu_x mean of return
+            X - mu_x: deviation of returns  D3
+            sigma_x expected variance F3
+
+            Y realised variance E3
+            mu_y expected variance F3
+            sigma_y volatility of variance J11
+
+            process 1  returns  mean mu_x sigma_x sqrt(variance[process 2])
+            process 2 variance of returns sigma_y
+
+        """
+        exp_var = g_exp_var(real_var=real_var, kappa=kappa_, theta=theta_, v_0=v0_)
+        f1 = residuals/np.sqrt(exp_var)
+        f2 = (real_var - exp_var) / sigma_
+        f12 = 2*rho_ * f1 * f2
+        ext = np.exp(-((f1**2 + f2**2 - f12)/(2*(1-rho_**2))))
+        den = 2*np.pi*np.sqrt(exp_var)*sigma_*np.sqrt(1-rho_**2)
+
+        if np.count_nonzero(den) != len(den):
+            a = -1000
+        else:
+            a = (np.log(ext / den)).sum()
+
+        return -a
+
+    print(g_exp_var(real_var, kappa, theta, v0))
+
+    print(MLEheston([theta, kappa, sigma, rho, v0]))
+
+    bounds = [(0,100),(0.01,150), (0.01,100.), (-0.9,0.9), (0,100.0)]
+
+    t = np.linspace(bounds[0][0], bounds[0][1], 10)
+    k = np.linspace(bounds[1][0], bounds[1][1], 10)
+    s = np.linspace(bounds[2][0], bounds[2][1], 10)
+    r = np.linspace(bounds[3][0], bounds[3][1], 10)
+    v = np.linspace(bounds[4][0], bounds[4][1], 10)
+
+    """
+    a_min = 1000
+    p_min = None
+    for i in t:
+        for j in k:
+            for l in s:
+                for m in r:
+                    for n in v:
+                        p = [i,j,l,m,n]
+                        a = MLEheston(p)
+                        if a < a_min:
+                            a_min = a
+                            p_min = p
+                            print(a_min)
+
+    print(a_min, p_min)
+    """
+
+    p_min = [55.555, 0.01, 11.12, 0.9999, 11.11]
+    pars = minimize(MLEheston, p_min,
+                bounds=bounds, method='L-BFGS-B')
+    print(pars)
+
     exit()
     symbols = ['MSFT', 'AVGO', 'PG', 'BIL', 'SPY']
     symbols = ['BIL', 'HON', 'CL', 'AVGO', 'PG', 'PEP', 'XOM', 'KO', 'TXN', 'MO', 'XOM',

@@ -23,7 +23,7 @@ def m_duration(df, ytm):
 def ytm_discrete(df, value):
     ytm0 = 0.00
     ytmf = 1.000
-    ytms = np.linspace(ytm0, ytmf, 1000)
+    ytms = np.linspace(0.0, 1.0, 1000)
     npvs = npv(df, ytms)
     # calculate the difference array
     difference_array = np.absolute(npvs - value)

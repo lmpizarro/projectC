@@ -19,7 +19,7 @@ def correlated_sampler(N, M, rho):
     return Z
 
 @njit()
-def heston_model_sim(S0, v0, kappa, theta, sigma,T, N, M, Z):
+def heston_model_sim(S0, r, v0, kappa, theta, sigma,T, N, M, Z):
     """
     Inputs:
      - S0, v0: initial parameters for asset and variance
@@ -61,12 +61,14 @@ S0 = 400.38
 
 T=1
 N = 252                # number of time steps in simulation
-M = 100000            # number of simulations
+M = 4            # number of simulations
 """
     - rho   : correlation between asset returns and variance
 """
 Z = correlated_sampler(N, M, rho)
-S,v = heston_model_sim(S0, v0, kappa, theta, sigma,T, N, M, Z)
+S,v = heston_model_sim(S0, r, v0, kappa, theta, sigma,T, N, M, Z)
+
+print(S)
 
 # Set strikes and complete MC option price for different strikes
 K =np.arange(180, 500,10)

@@ -3,6 +3,9 @@ import pandas as pd
 
 import datetime
 from scipy import optimize 
+import warnings
+warnings.simplefilter("ignore")
+
 
 def xnpv(rate,cashflows):
     chron_order = sorted(cashflows, key = lambda x: x[0])
@@ -41,9 +44,6 @@ def modified_duration(cashflow,precio,plazo=2):
   return round(dur/(1+tir(cashflow,precio,plazo)/100),2)
   
 
-
-
-
 url = "https://iol.invertironline.com/mercado/cotizaciones/argentina/obligaciones%20negociables"
 ON = pd.read_html(url)[0]
 
@@ -58,7 +58,7 @@ precios_ON['Ticker']=ON['Símbolo']
 precios_ON=precios_ON[['Ticker','ÚltimoOperado','MontoOperado']]
 precios_ON.set_index('Ticker',inplace=True)
 
-Data_ON=tickers=pd.read_excel('cashflows_ON.xlsx', sheet_name='Data_ON')
+Data_ON=tickers=pd.read_excel('cashflows_ON.xlsx', sheet_name='Data_ON', engine="openpyxl" )
 
 comunes=list(set(precios_ON.index) & set(Data_ON['ticker_dolares']))
 
@@ -94,7 +94,7 @@ tickers_ON = Data_ON.index
 
 cashflows={}
 for i in Data_ON.index:
-  CF=pd.read_excel('cashflows_ON.xlsx', sheet_name=i)
+  CF=pd.read_excel('cashflows_ON.xlsx', sheet_name=i, engine="openpyxl")
   cashflows[i]=CF
 
 print(cashflows['IRCFO'])
@@ -139,7 +139,7 @@ TIR.columns=['MD','TIR']
 Data_ON['MD']=TIR['MD']
 Data_ON['TIR']=TIR['TIR']
 
-tir_pos = Data_ON[Data_ON.TIR > 6]
+tir_pos = Data_ON[(Data_ON.TIR > 6) ]
 tir_pos['ratio'] = round(tir_pos['Precio_pesos'] / tir_pos['Precio_dolares'],2)
 print(Data_ON.columns)
 keys = ['TIR', 'MD', 'Precio_dolares', 'Vencimiento', 'Emp', 'Ley', 'Pago', 'lamina_minima', 'frecuencia_Pagos', 'ratio' ]

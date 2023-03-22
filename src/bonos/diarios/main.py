@@ -26,17 +26,7 @@ class Fit:
     def polyModel(rs, vs, degree=8):
         return np.poly1d(np.polyfit(rs, vs, degree))
 
-    @staticmethod
-    def monoLog(x, m, t, b):
-        return m * np.log(t * x) + b
 
-    @staticmethod
-    def optimizeLog(rs, vs, p0):
-        params, cv = scipy.optimize.curve_fit(Fit.monoLog, rs, vs, p0)
-        m, t, b = params
-
-        return m, t, b
- 
 class FromYF:
     """
     13 Week Treasury Bill (^IRX)

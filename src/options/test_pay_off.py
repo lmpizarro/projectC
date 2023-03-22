@@ -21,3 +21,13 @@ bcs = BullCallSpread(options=[opt1, opt2])
 
 plt.plot(bcs.prices, bcs.pay_off())
 plt.show()
+
+from payoff.straddle import LongStraddle, ShortStraddle
+
+
+opt1 = Option(7800,.3,10,.1,.1, 'P', 25)
+opt2 = Option(7800,.3,10,.1,.1, 'C', 25)
+
+ls = ShortStraddle(options=[opt1, opt2])
+plt.plot(ls.prices, ls.pay_off())
+plt.show()

@@ -89,7 +89,7 @@ def get_opt_prices_strike(ticker='AAPL'):
 def plot_PKT_3D(volSurfacePKT):
 
     K = np.array(volSurfacePKT.columns, dtype="float64") # strikes
-    T = volSurfacePKT.index  # maturities
+    T = volSurfacePKT.index.sort_values(ascending=True)  # maturities
 
     X, Y = np.meshgrid(K,T)
     Prices = np.array(volSurfacePKT, dtype="float64")
@@ -158,12 +158,15 @@ if __name__ == '__main__':
     [del_key(prices_strike, key) for key in key_to_del]
 
     df_prices = pd.DataFrame(prices_strike)
-    df_prices = df_prices.loc[(df_prices.index > limit_inf) & (df_prices.index < limit_sup)]
+    df_prices = df_prices.loc[(df_prices.index > 0) & (df_prices.index < limit_sup)]
+    df_prices = df_prices.T
+    df_prices = df_prices.loc[(df_prices.index < 1.0)]
     df_prices[df_prices < 0] = 0
     df_prices.fillna(0, inplace=True)
+    print(df_prices.tail())
     plot_PKT_3D(df_prices)
 
     for c in df_prices.columns:
        y = df_prices[c].dropna()
        plt.plot(y.index, y, 'x-')
-    plt.show()
+       plt.show()

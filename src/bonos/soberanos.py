@@ -56,14 +56,21 @@ def valor_bono_disc(pair_pagos, tasa, pagos_p_a=2):
         valor += v 
     return valor
 
+def convert_to_bonistas(pickle):
+    # 'FECHA', 'SALDO', 'CUPÓN', 'AMORTIZACIÓN', 'TOTAL', 'T'
+    #  ejemplo 2025-01-09	100.000	0.500	10.000	10.500
+    with open('bonos.pkl', 'rb') as fp:
+        bonos = pickle.load(fp)
+
+    
+
+
 if __name__ == '__main__':
 
     with open('bonos.pkl', 'rb') as fp:
         bonos = pickle.load(fp)
 
-    print(bonos.keys())
     for k in bonos:
-
        today = date.today()
        total_amortizacion, total_renta, _ = get_nominals(bonos[k], today)
        total_pago = total_amortizacion + total_renta

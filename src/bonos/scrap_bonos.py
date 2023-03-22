@@ -141,7 +141,6 @@ if __name__ == '__main__':
         df = scrap_cash_flows(ticker)
         ref_day = date.today()
         calc_ttm(df, ref_day)
-        print(df.tail())
         tir_ = ytm_discrete(df, price)
 
         total_amort = df['AMORTIZACIÓN'].sum()
