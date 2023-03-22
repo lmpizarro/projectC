@@ -14,8 +14,8 @@ class LongCall(PayOff):
 
     def pay_off(self):
         po = np.where(self.prices < self.options[0].K,
-                      0,
-                      self.prices - self.options[0].K)
+                    0,
+                    self.prices - self.options[0].K)
         return po
 
     def set_prices(self):
@@ -55,11 +55,11 @@ class ShortPut(PayOff):
     def __init__(self, options: List[Option]) -> None:
         super().__init__(options)
 
+        self.lp = LongPut(options)
         self.set_prices()
 
     def pay_off(self):
-        po = np.where(self.prices < self.options[0].K, - self.prices + self.options[0].K, 0)
-        return - po
+        return - self.lp.pay_off()
 
     def set_prices(self):
         return super().set_prices()

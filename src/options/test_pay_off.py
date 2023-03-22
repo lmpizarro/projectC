@@ -10,7 +10,7 @@ opt2 = Option(7900,.3,10,.1,.1, 'P', 25)
 lp = LongPut(options=[opt2])
 sp = ShortPut(options=[opt2])
 
-plt.plot(lc.prices, lc.pay_off())
+plt.plot(sp.prices, sp.pay_off())
 plt.show()
 
 from payoff.call_spread import BullCallSpread
@@ -31,3 +31,13 @@ opt2 = Option(7800,.3,10,.1,.1, 'C', 25)
 ls = ShortStraddle(options=[opt1, opt2])
 plt.plot(ls.prices, ls.pay_off())
 plt.show()
+
+from payoff.strangle import LongStrangle, ShortStrangle
+
+opt1 = Option(7000,.3,10,.1,.1, 'P', 25)
+opt2 = Option(7800,.3,10,.1,.1, 'C', 25)
+
+ls = LongStrangle(options=[opt1, opt2])
+plt.plot(ls.prices, ls.pay_off())
+plt.show()
+
