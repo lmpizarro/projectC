@@ -17,7 +17,7 @@ class LongStrangle(PayOff):
         self.set_prices()
 
     def set_prices(self):
-        self.prices = np.linspace(.5*K1, 1.5*K2, 100)
+        self.prices = np.linspace(.5*self.K1, 1.5*self.K2, 100)
 
     def pay_off(self):
         a = np.where(self.prices > self.K2, self.prices - self.K2, 0)
