@@ -64,3 +64,7 @@ class ShortPut(PayOff):
     def set_prices(self):
         return super().set_prices()
 
+
+    def profit_loss(self):
+        return self.pay_off() + self.lp.options[0].P
+

@@ -1,52 +1,51 @@
 import numpy as np
-from scipy import interpolate
-from scipy.stats import kurtosis, skew
 import matplotlib.pyplot as plt
 from scipy.stats import nct
 from scipy.stats import norm
 from scipy.stats import cauchy
+from fitters import *
+from scipy.interpolate import splrep, BSpline
 
 
 import yfinance as yf
 
-yf_data = yf.download('KO', start='2005-01-01')
-yf_data['returns'] = yf_data['Adj Close'].pct_change()
-yf_data['log_return'] = np.log(yf_data['Adj Close']/yf_data['Adj Close'].shift(1))
-yf_data.dropna(inplace=True)
+stocks = ['AAPL',  'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'BRK-B', 'TSLA', 'META', 'JNJ',
+          'V', 'TSM', 'XOM', 'UNH', 'WMT', 'JPM', 'MA', 'PG', 'LLY', 'CVX', 'HD',
+          'ASML', 'ABBV', 'SPY', 'QQQ', 'DIA']
+stocks_ = ['TSM', 'XOM', 'JPM', 'CVX', 'TM', 'PFE', 'BAC']
+stocks_= ['SPY', 'QQQ', 'DIA']
+stocks_ = ['YPF', 'BMA', 'TX', 'PAM', 'EDN', 'GGAL', 'LOMA']
+yf_data = yf.download(stocks, group_by=stocks, start='2012-01-01')
 
-def find_nearest(array, value):
-    idx = (np.abs(array - value)).argmin()
-    return idx
+print(yf_data.head())
 
-def create_histogram(yf_data, key='log_return', bins=251):
-    count, bins_count = np.histogram(yf_data[key], bins=bins)
-    pdf = count / sum(count)
-    cdf = np.cumsum(pdf)
+def denoise_spl(x, y, s):
+    tck_s = splrep(x, y, s=s)
+    return tck_s
 
-    return bins_count[1:], cdf
+for stock in stocks:
+    pass_tuple = (stock, 'Adj Close')
+    yf_data[(stock, 'returns')] = yf_data[pass_tuple].pct_change()
+    yf_data[(stock, 'log_returns')] = np.log(yf_data[pass_tuple]/yf_data[pass_tuple].shift(1))
+    yf_data.dropna(inplace=True)
 
-def sample_cdf(bins, cdf, size=252):
-    func_cdf = interpolate.InterpolatedUnivariateSpline(bins, cdf, k=5)
+    f_data = yf_data[stock]
 
-    sample_uniform = np.random.default_rng().uniform(low=0.0, high=1.0, size=size)
-    sample_arb = np.array([find_nearest(func_cdf(bins), s) for s in sample_uniform])
-    x = np.array([bins[i] for i in sample_arb])
-    return x
+    loc, scale = fit_norm(f_data)
 
-bins, cdf = create_histogram(yf_data)
+    bins, cdf, count = create_histogram(f_data)
+    spl_cdf = spline_cdf(bins, cdf)
 
-a = np.zeros(0)
-for i in range(1000):
-    returns = np.concatenate((np.ones(1), sample_cdf(bins, cdf)))
+    dYdx = -(spl_cdf(-0.005)-spl_cdf(0.005))/0.01
 
-    a = np.concatenate((a, np.ones(1) * returns.cumsum()[-1]))
+    print(stock, dYdx, loc, scale)
 
-print(a.mean())
 
-exit()
-plt.plot(bins, spl(bins), label='spline')
-plt.legend()
+    plt.plot(bins, count, label=f'CDF {stock}')
+    plt.legend()
+
 plt.show()
+exit()
 
 def view_returns(yf_data, key='returns'):
     loc1, scale1 = norm.fit(data=yf_data[key])

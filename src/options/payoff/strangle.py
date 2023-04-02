@@ -11,6 +11,7 @@ class LongStrangle(PayOff):
 
         if self.options[0].K >= self.options[1].K:
             raise OptionError("K2 mut be GT K1")
+        
         self.K2 = options[1].K
         self.K1 = options[0].K
 

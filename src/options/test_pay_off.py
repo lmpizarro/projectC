@@ -11,6 +11,7 @@ lp = LongPut(options=[opt2])
 sp = ShortPut(options=[opt2])
 
 plt.plot(sp.prices, sp.pay_off())
+plt.plot(sp.prices, sp.profit_loss())
 plt.show()
 
 from payoff.call_spread import BullCallSpread
