@@ -38,7 +38,8 @@ for stock in stocks:
 
     dYdx = -(spl_cdf(-0.005)-spl_cdf(0.005))/0.01
 
-    print(stock, dYdx, loc, scale)
+    f_data_r =  f_data['log_returns']
+    print(stock, 1000*loc/scale + len(f_data_r[f_data_r>2*scale]) + len(f_data_r)/len(f_data_r[f_data_r<-2*scale]))
 
 
     plt.plot(bins, count, label=f'CDF {stock}')
