@@ -298,9 +298,7 @@ def test01():
 
     print(c.tail())
 
-if __name__ == '__main__':
-    # scrap_bonistas_main()
-    url = f'https://finviz.com/screener.ashx?v=121&f=cap_large&ft=4&o=-marketcap'
+def get_df_finviz(url: str):
     resp = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
     soup = BeautifulSoup(resp.text, features='lxml')
     table = soup.findAll('table')
@@ -313,3 +311,27 @@ if __name__ == '__main__':
     df.drop(0, inplace=True)
 
     print(df.head())
+
+
+def generate_urls_scrap_finviz():
+    index = [111, 121, 161, 131, 141, 171]
+    sub_title = ["overview", "valuation", "financial", "ownership", "performance", "technical"]
+    index_view = dict(zip(index, sub_title))
+
+    capital = {'mega': 21, 'large': 81, 'mid': 81, 'small': 81}
+
+    urls = []
+    for j in capital:
+        for i in range(1, capital[j] + 1, 20):
+            for k in index_view:
+                url = f'https://finviz.com/screener.ashx?v={k}&f=cap_{j}&ft=4&o=-marketcap&r={i}'
+                urls.append(url)
+
+    return urls
+
+
+if __name__ == '__main__':
+    # scrap_bonistas_main()
+    urls = generate_urls_scrap_finviz()
+    for url in urls:
+        get_df_finviz(url)
