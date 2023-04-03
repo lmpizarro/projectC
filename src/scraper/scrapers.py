@@ -299,4 +299,17 @@ def test01():
     print(c.tail())
 
 if __name__ == '__main__':
-    scrap_bonistas_main()
+    # scrap_bonistas_main()
+    url = f'https://finviz.com/screener.ashx?v=121&f=cap_large&ft=4&o=-marketcap'
+    resp = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
+    soup = BeautifulSoup(resp.text, features='lxml')
+    table = soup.findAll('table')
+    df = pd.read_html(str(table))[-2]
+    maper = {}
+    for i,e in enumerate(df.iloc[0]):
+        maper[df.keys()[i]] = e
+
+    df.rename(columns=maper, inplace=True)
+    df.drop(0, inplace=True)
+
+    print(df.head())
