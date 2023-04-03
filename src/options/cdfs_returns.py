@@ -5,17 +5,20 @@ from scipy.stats import norm
 from scipy.stats import cauchy
 from fitters import *
 from scipy.interpolate import splrep, BSpline
+from sklearn import preprocessing
 
 
 import yfinance as yf
+import pandas as pd
 
-stocks = ['AAPL',  'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'BRK-B', 'TSLA', 'META', 'JNJ',
+
+stocks = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'BRK-B', 'TSLA', 'META', 'JNJ',
           'V', 'TSM', 'XOM', 'UNH', 'WMT', 'JPM', 'MA', 'PG', 'LLY', 'CVX', 'HD',
-          'ASML', 'ABBV', 'SPY', 'QQQ', 'DIA']
+          'ASML', 'ABBV', 'SPY', 'QQQ', 'DIA', 'GLOB', 'MELI']
 stocks_ = ['TSM', 'XOM', 'JPM', 'CVX', 'TM', 'PFE', 'BAC']
 stocks_= ['SPY', 'QQQ', 'DIA']
 stocks_ = ['YPF', 'BMA', 'TX', 'PAM', 'EDN', 'GGAL', 'LOMA']
-yf_data = yf.download(stocks, group_by=stocks, start='2012-01-01')
+yf_data = yf.download(stocks, group_by=stocks, start='2017-01-01')
 
 print(yf_data.head())
 
@@ -23,6 +26,67 @@ def denoise_spl(x, y, s):
     tck_s = splrep(x, y, s=s)
     return tck_s
 
+def returns_positives_gt_threshold(f_data, key='log_returns'):
+    loc, scale = fit_norm(f_data, key=key)
+    return f_data[key][f_data[key] >= loc+2*scale]
+
+def returns_negatives_lt_threshold(f_data, key='log_returns'):
+    loc, scale = fit_norm(f_data, key=key)
+    return f_data[key][f_data[key] <= loc-2*scale]
+
+def quality_factors(f_data, key='log_returns'):
+    loc, scale = fit_norm(f_data, key=key)
+    r_positives_gt = returns_positives_gt_threshold(f_data, key=key)
+    r_negatives_lt = returns_negatives_lt_threshold(f_data, key=key)
+    r_negatives = f_data[key][f_data[key]<0]
+    r_positives = f_data[key][f_data[key]>=0]
+    return {'loc':loc,
+            'scale':scale,
+            'len_pos':len(r_positives_gt),
+            'len_neg':len(r_negatives_lt),
+            'sum_pos':r_positives_gt.sum(),
+            'sum_neg': np.abs(r_negatives_lt.sum()),
+            'neg_mean': r_negatives.mean(),
+            'pos_mean': r_positives.mean(),
+            'pos_std': r_positives.std(),
+            'neg_std': r_negatives.std()}
+
+from sklearn.preprocessing import MinMaxScaler
+
+class Scalers:
+    @staticmethod
+    def standardization(df_factors, keys_to_analize):
+        means = df_factors[keys_to_analize].mean()
+        stds = df_factors[keys_to_analize].std()
+        df_factors[keys_to_analize] = \
+            (df_factors[keys_to_analize] - means[keys_to_analize]) / stds[keys_to_analize]
+
+
+    @staticmethod
+    def min_max_scaler(df_factors, keys_to_analize):
+        norm = MinMaxScaler().fit(df_factors[keys_to_analize])
+        df_factors[keys_to_analize] = norm.transform(df_factors[keys_to_analize])
+
+    @staticmethod
+    def pct_of_sum(df_factors, keys_to_analize):
+        sums = df_factors[keys_to_analize].sum()
+        df_factors[keys_to_analize] = df_factors[keys_to_analize] / sums[keys_to_analize]
+
+def calculate_indices(all_factors: dict):
+    keys_to_analize = ['loc', 'scale', 'len_neg', 'len_pos', 'sum_neg', 'sum_pos']
+    df_factors = pd.DataFrame(all_factors)
+    df_factors['scale'] = 1 / df_factors['scale']
+    df_factors['len_neg'] = 1 / df_factors['len_neg']
+    df_factors['sum_neg'] = 1 / df_factors['sum_neg']
+    print(df_factors.shape)
+
+    Scalers.pct_of_sum(df_factors=df_factors, keys_to_analize=keys_to_analize)
+    df_factors['all_sum'] = df_factors[keys_to_analize].sum(axis=1)
+    s_df = df_factors.sort_values(by=['all_sum'])
+    print(s_df)
+
+
+all_factors = []
 for stock in stocks:
     pass_tuple = (stock, 'Adj Close')
     yf_data[(stock, 'returns')] = yf_data[pass_tuple].pct_change()
@@ -31,21 +95,20 @@ for stock in stocks:
 
     f_data = yf_data[stock]
 
-    loc, scale = fit_norm(f_data)
-
     bins, cdf, count = create_histogram(f_data)
     spl_cdf = spline_cdf(bins, cdf)
 
     dYdx = -(spl_cdf(-0.005)-spl_cdf(0.005))/0.01
 
-    f_data_r =  f_data['log_returns']
-    print(stock, 1000*loc/scale + len(f_data_r[f_data_r>2*scale]) + len(f_data_r)/len(f_data_r[f_data_r<-2*scale]))
-
+    factors = quality_factors(f_data=f_data)
+    factors['stock'] = stock
 
     plt.plot(bins, count, label=f'CDF {stock}')
     plt.legend()
-
+    all_factors.append(factors)
+calculate_indices(all_factors=all_factors)
 plt.show()
+
 exit()
 
 def view_returns(yf_data, key='returns'):
