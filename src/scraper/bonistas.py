@@ -8,7 +8,8 @@ def scrap_bonistas_ticker(especie):
     """
     dfs = pd.read_html(url)
 
-    return {'metricas1': dfs[0],
+    return {'ticker': especie,
+            'metricas1': dfs[0],
             'metricas2': dfs[1],
             'calendario': dfs[2]}
 
@@ -46,11 +47,27 @@ def scrap_bonistas_main():
 
 
 
+from joblib import Parallel, delayed
+
 if __name__ == '__main__':
     tickers = scrap_bonistas_main()
 
+    metricas = []
+    """
     for ticker in tickers:
         print(ticker)
         dict_metricas = scrap_bonistas_ticker(ticker)
+        metricas.append(dict_metricas)
+    """
+    metricas = Parallel(n_jobs=6)(delayed(scrap_bonistas_ticker)(i) for i in tickers)
+    for metrica in metricas:
+        print(metrica['ticker'])
 
-        print(dict_metricas)
+        for i in range(len(metrica['metricas1'])):
+            print(metrica['metricas1'].iloc[i]['Descripción'], metrica['metricas1'].iloc[i]['Valor'])
+        for i in range(len(metrica['metricas2'])):
+            print(metrica['metricas2'].iloc[i]['Métricas'], metrica['metricas2'].iloc[i]['Valor'])
+
+
+        print('Proximo Cupon ', metrica['calendario'].iloc[0].FECHA)
+        print()
