@@ -1,5 +1,8 @@
 from config import urls
 import pandas as pd
+from joblib import Parallel, delayed
+from datetime import date, datetime
+
 
 def scrap_bonistas_ticker(especie):
     url = f"{urls['bonistas_com']}/md/{especie}"
@@ -45,9 +48,12 @@ def scrap_bonistas_main():
     return tickers
 
 
+def fecha_datetime(fecha_pq):
+    fecha_pq = fecha_pq.split('-')
+    pq_date = date(int(fecha_pq[0]), int(fecha_pq[1]), int(fecha_pq[2]))
+    pq_date = datetime.combine(pq_date, datetime.min.time())
+    return pq_date
 
-
-from joblib import Parallel, delayed
 
 if __name__ == '__main__':
     tickers = scrap_bonistas_main()
@@ -103,17 +109,23 @@ if __name__ == '__main__':
         fecha_pq = metrica['calendario'].iloc[0].FECHA
         last_fecha = metrica['calendario'].iloc[-1].FECHA
         valores['PQ'] = fecha_pq
-        from datetime import date, datetime
 
-        fecha_pq = fecha_pq.split('-')
-        pq_date = date(int(fecha_pq[0]), int(fecha_pq[1]), int(fecha_pq[2]))
-        pq_date = datetime.combine(pq_date, datetime.min.time())
+        pq_date = fecha_datetime(fecha_pq=fecha_pq)
+
         delta_t = (datetime.now() - pq_date).days
+
         valores['tPQ'] = -delta_t
         valores['FIN'] = last_fecha
+        last_date = fecha_datetime(fecha_pq=last_fecha)
+        delta_to_fin = (last_date - datetime.now()).days
+        valores['tFIN'] = round(delta_to_fin / 360, 4)
+        valores['ratMD'] = round(float(valores['MD']) / valores['tFIN'], 4)
         metricas_ticker.append(valores)
     df_metricas = pd.DataFrame(metricas_ticker)
-    df_metricas.drop('RP1', axis='columns', inplace=True)
-    df_metricas.drop('RP5', axis='columns', inplace=True)
+
+    # df_metricas.drop('RP1', axis='columns', inplace=True)
+    # df_metricas.drop('RP5', axis='columns', inplace=True)
+    # df_metricas.drop('Variación', axis='columns', inplace=True)
+
     print(df_metricas)
     df_metricas.to_csv('metricas_bonos.csv')
