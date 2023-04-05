@@ -100,8 +100,17 @@ if __name__ == '__main__':
 
             valores[key] = value.strip()
 
+        fecha_pq = metrica['calendario'].iloc[0].FECHA
+        last_fecha = metrica['calendario'].iloc[-1].FECHA
+        valores['PQ'] = fecha_pq
+        from datetime import date, datetime
 
-        valores['PQ'] = metrica['calendario'].iloc[0].FECHA
+        fecha_pq = fecha_pq.split('-')
+        pq_date = date(int(fecha_pq[0]), int(fecha_pq[1]), int(fecha_pq[2]))
+        pq_date = datetime.combine(pq_date, datetime.min.time())
+        delta_t = (datetime.now() - pq_date).days
+        valores['tPQ'] = -delta_t
+        valores['FIN'] = last_fecha
         metricas_ticker.append(valores)
     df_metricas = pd.DataFrame(metricas_ticker)
     df_metricas.drop('RP1', axis='columns', inplace=True)
