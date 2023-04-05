@@ -60,14 +60,51 @@ if __name__ == '__main__':
         metricas.append(dict_metricas)
     """
     metricas = Parallel(n_jobs=6)(delayed(scrap_bonistas_ticker)(i) for i in tickers)
+    metricas_ticker = []
     for metrica in metricas:
-        print(metrica['ticker'])
 
+        valores = {}
         for i in range(len(metrica['metricas1'])):
-            print(metrica['metricas1'].iloc[i]['Descripción'], metrica['metricas1'].iloc[i]['Valor'])
+            key = metrica['metricas1'].iloc[i]['Descripción']
+            value = metrica['metricas1'].iloc[i]['Valor']
+
+            if key == "Variación diaria" and value[0] == '=':
+                value = value[2:]
+
+            if key == "Variación diaria":
+                key = 'Variación'
+
+            if key == "Valor Técnico":
+                key = 'Val.Tec.'
+
+            valores[key] = value
         for i in range(len(metrica['metricas2'])):
-            print(metrica['metricas2'].iloc[i]['Métricas'], metrica['metricas2'].iloc[i]['Valor'])
+            key = metrica['metricas2'].iloc[i]['Métricas']
+            value =  metrica['metricas2'].iloc[i]['Valor']
+            if key == "Up TIR":
+                value = value[2:]
+
+            if key == 'Riesgo - Percentil 5':
+                key = 'RP5'
+            if key == 'Riesgo - Percentil 1':
+                key = 'RP1'
+            if key == 'TIR Promedio':
+                key = 'TIRProm'
+
+            if ' ' in key:
+                key = key.replace(' ', '')
+
+            if key == "UpTIR" and value[0] == '=':
+                value = value[2:]
 
 
-        print('Proximo Cupon ', metrica['calendario'].iloc[0].FECHA)
-        print()
+            valores[key] = value.strip()
+
+
+        valores['PQ'] = metrica['calendario'].iloc[0].FECHA
+        metricas_ticker.append(valores)
+    df_metricas = pd.DataFrame(metricas_ticker)
+    df_metricas.drop('RP1', axis='columns', inplace=True)
+    df_metricas.drop('RP5', axis='columns', inplace=True)
+    print(df_metricas)
+    df_metricas.to_csv('metricas_bonos.csv')
