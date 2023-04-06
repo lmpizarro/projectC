@@ -23,4 +23,5 @@ assert status.success
 
 print(curve)
 plt.plot(df_q['MD'], curve(df_q['MD']), 'o-')
+plt.plot(df_q['MD'], curve.forward(df_q['MD']), 'o-')
 plt.show()
