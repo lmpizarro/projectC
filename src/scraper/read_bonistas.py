@@ -1,4 +1,6 @@
 import pandas as pd
+from nelson_siegel_svensson.calibrate import calibrate_ns_ols
+
 
 df = pd.read_csv("metricas_bonos.csv")
 print(df.keys())
@@ -10,12 +12,15 @@ df_q = df[((df.TIPO == 'CER') | (df.TIPO == 'LECER')) & ((df.TIR > 0) & (df.TIR 
 import matplotlib.pyplot as plt
 
 print(df_q)
+print(df_q.shape)
+print(df_q.shape)
+print(df_q['MD'].shape)
+print(df_q['TIR'].shape)
 
-ax = df_q.plot(kind='scatter', x='MAT', y='MD')
 
-#label each point in scatter plot
-for idx, row in df_q.iterrows():
-    y = 1 if idx % 2 else -1
-    ax.annotate(row['Ticker'], (row['MAT'], row['MD']), xytext=(y*5,y*10),textcoords='offset points', fontsize=6)
+curve, status = calibrate_ns_ols(df_q['MD'].to_numpy(), df_q['TIR'].to_numpy()/100, tau0=1.0)  # starting value of 1.0 for the optimization of tau
+assert status.success
 
+print(curve)
+plt.plot(df_q['MD'], curve(df_q['MD']), 'o-')
 plt.show()
