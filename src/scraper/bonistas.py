@@ -16,6 +16,21 @@ def scrap_bonistas_ticker(especie):
             'metricas2': dfs[1],
             'calendario': dfs[2]}
 
+def ticker_by_class(bonos: dict):
+    class_bonos = {}
+    for desc in bonos:
+        print(desc)
+        if desc in ['CER', 'USD', 'LEDES', 'LECER', 'tasa fija badlar']:
+            class_bonos[desc] = list(bonos[desc]['Ticker'])
+    bonos_class = {}
+
+    for clas in class_bonos:
+        for ticker in class_bonos[clas]:
+            bonos_class[ticker] = clas
+
+
+    return bonos_class
+
 def scrap_bonistas_main():
     url = f"{urls['bonistas_com']}"
 
@@ -33,19 +48,19 @@ def scrap_bonistas_main():
     bonos = {}
     for index, df in enumerate(dfs):
         if index < 11 and not (index % 2):
-            bonos[index] = df
+            bonos[maps[index]] = df
             if index in tickers_index:
                 tickers.extend(list(df.Ticker))
         elif index > 11 and index <= 13:
-            bonos[index] = df
+            bonos[maps[index]] = df
             if index in tickers_index:
                 tickers.extend(list(df.Ticker))
 
     for index in bonos:
-        print(f'-- {index} ---------- {maps[index].upper()} --------')
+        print(f'------- {index}  --------')
         print(bonos[index])
 
-    return tickers
+    return tickers, ticker_by_class(bonos)
 
 
 def fecha_datetime(fecha_pq):
@@ -56,7 +71,7 @@ def fecha_datetime(fecha_pq):
 
 
 if __name__ == '__main__':
-    tickers = scrap_bonistas_main()
+    tickers, bonos = scrap_bonistas_main()
 
     metricas = []
     """
@@ -82,6 +97,15 @@ if __name__ == '__main__':
 
             if key == "Valor Técnico":
                 key = 'Val.Tec.'
+
+            if key == 'Ticker':
+                try:
+                    tipo = bonos[value.strip()]
+                    if tipo == 'tasa fija badlar':
+                        tipo = 'fija-badlar'
+                    valores['TIPO'] = tipo
+                except:
+                    pass
 
             valores[key] = value
         for i in range(len(metrica['metricas2'])):
@@ -129,3 +153,6 @@ if __name__ == '__main__':
 
     print(df_metricas)
     df_metricas.to_csv('metricas_bonos.csv')
+
+    print(bonos)
+
