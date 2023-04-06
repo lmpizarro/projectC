@@ -56,11 +56,7 @@ def scrap_bonistas_main():
             if index in tickers_index:
                 tickers.extend(list(df.Ticker))
 
-    for index in bonos:
-        print(f'------- {index}  --------')
-        print(bonos[index])
-
-    return tickers, ticker_by_class(bonos)
+    return ticker_by_class(bonos)
 
 
 def fecha_datetime(fecha_pq):
@@ -71,7 +67,8 @@ def fecha_datetime(fecha_pq):
 
 
 if __name__ == '__main__':
-    tickers, bonos = scrap_bonistas_main()
+    bonos = scrap_bonistas_main()
+    tickers = bonos.keys()
 
     metricas = []
     """
@@ -100,10 +97,10 @@ if __name__ == '__main__':
 
             if key == 'Ticker':
                 try:
-                    tipo = bonos[value.strip()]
-                    if tipo == 'tasa fija badlar':
-                        tipo = 'fija-badlar'
-                    valores['TIPO'] = tipo
+                    tipo_de_bono = bonos[value.strip()]
+                    if tipo_de_bono == 'tasa fija badlar':
+                        tipo_de_bono = 'fija-badlar'
+                    valores['TIPO'] = tipo_de_bono
                 except:
                     pass
 
@@ -153,6 +150,3 @@ if __name__ == '__main__':
 
     print(df_metricas)
     df_metricas.to_csv('metricas_bonos.csv')
-
-    print(bonos)
-
