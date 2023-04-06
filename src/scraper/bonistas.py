@@ -139,8 +139,8 @@ if __name__ == '__main__':
         valores['FIN'] = last_fecha
         last_date = fecha_datetime(fecha_pq=last_fecha)
         delta_to_fin = (last_date - datetime.now()).days
-        valores['tFIN'] = round(delta_to_fin / 360, 4)
-        valores['ratMD'] = round(float(valores['MD']) / valores['tFIN'], 4)
+        valores['MAT'] = round(delta_to_fin / 360, 4)
+        valores['ratMD'] = round(float(valores['MD']) / valores['MAT'], 4)
         metricas_ticker.append(valores)
     df_metricas = pd.DataFrame(metricas_ticker)
 
