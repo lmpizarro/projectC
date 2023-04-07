@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.stats import nct
 from scipy.stats import norm
@@ -6,21 +7,8 @@ from scipy.stats import cauchy
 from fitters import *
 from scipy.interpolate import splrep, BSpline
 from sklearn import preprocessing
+from downloader import download_stocks, stocks
 
-
-import yfinance as yf
-import pandas as pd
-
-
-stocks = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'BRK-B', 'TSLA', 'META', 'JNJ',
-          'V', 'TSM', 'XOM', 'UNH', 'WMT', 'JPM', 'MA', 'PG', 'LLY', 'CVX', 'HD',
-          'ASML', 'ABBV', 'SPY', 'QQQ', 'DIA', 'GLOB', 'MELI']
-stocks_ = ['TSM', 'XOM', 'JPM', 'CVX', 'TM', 'PFE', 'BAC']
-stocks_= ['SPY', 'QQQ', 'DIA']
-stocks_ = ['YPF', 'BMA', 'TX', 'PAM', 'EDN', 'GGAL', 'LOMA']
-yf_data = yf.download(stocks, group_by=stocks, start='2017-01-01')
-
-print(yf_data.head())
 
 def denoise_spl(x, y, s):
     tck_s = splrep(x, y, s=s)
@@ -51,8 +39,8 @@ def quality_factors(f_data, key='log_returns'):
             'pos_std': r_positives.std(),
             'neg_std': r_negatives.std()}
 
-from sklearn.preprocessing import MinMaxScaler
 
+from sklearn.preprocessing import MinMaxScaler
 class Scalers:
     @staticmethod
     def standardization(df_factors, keys_to_analize):
@@ -72,7 +60,7 @@ class Scalers:
         sums = df_factors[keys_to_analize].sum()
         df_factors[keys_to_analize] = df_factors[keys_to_analize] / sums[keys_to_analize]
 
-def calculate_indices(all_factors: dict):
+def calculate_factors(all_factors: dict):
     keys_to_analize = ['loc', 'scale', 'len_neg', 'len_pos', 'sum_neg', 'sum_pos']
     df_factors = pd.DataFrame(all_factors)
     df_factors['scale'] = 1 / df_factors['scale']
@@ -85,14 +73,10 @@ def calculate_indices(all_factors: dict):
     s_df = df_factors.sort_values(by=['all_sum'])
     print(s_df)
 
+yf_data = download_stocks()
 
 all_factors = []
 for stock in stocks:
-    pass_tuple = (stock, 'Adj Close')
-    yf_data[(stock, 'returns')] = yf_data[pass_tuple].pct_change()
-    yf_data[(stock, 'log_returns')] = np.log(yf_data[pass_tuple]/yf_data[pass_tuple].shift(1))
-    yf_data.dropna(inplace=True)
-
     f_data = yf_data[stock]
 
     bins, cdf, count = create_histogram(f_data)
@@ -106,7 +90,7 @@ for stock in stocks:
     plt.plot(bins, count, label=f'CDF {stock}')
     plt.legend()
     all_factors.append(factors)
-calculate_indices(all_factors=all_factors)
+calculate_factors(all_factors=all_factors)
 plt.show()
 
 exit()
