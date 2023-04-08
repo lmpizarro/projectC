@@ -5,6 +5,8 @@ from scipy.stats import nct
 from scipy.stats import norm
 from scipy.stats import cauchy
 from collections import namedtuple
+from sklearn.linear_model import LinearRegression
+
 
 CDF = namedtuple("CDF", "x cdf pdf")
 Describe = namedtuple('Describe', 'min max sum mean std loc scale')
@@ -24,6 +26,7 @@ class Downloader:
         self.log_returns: pd.DataFrame
         self.ewm_log_returns: pd.DataFrame
         self.df_distance: pd.DataFrame
+        self.properties: pd.DataFrame
 
     def download(self):
         self.yf_data = yf.download(self.stocks, start=self.start, auto_adjust=True)['Close']
@@ -33,7 +36,43 @@ class Downloader:
         self.log_returns = pd.DataFrame()
         for stock in self.stocks:
             self.log_returns[stock] = np.log(self.yf_data[stock]/self.yf_data[stock].shift(1))
+
         self.log_returns.dropna(inplace=True)
+
+
+    def calc_props(self):
+
+        properties = []
+        for stock in self.stocks:
+            props = {}
+            props['ticker'] = stock
+            spy = np.array(self.log_returns['SPY'])
+            reg_spy = LinearRegression().fit(spy.reshape(-1,1), np.array(self.log_returns[stock]))
+            props['beta'] = reg_spy.coef_[0]
+            props['alfa'] = reg_spy.intercept_
+
+            props['mean'] = np.mean(self.log_returns[stock])
+            props['std'] = np.std(self.log_returns[stock])
+            props['VaR_95_vc'] = norm.ppf(0.05, props['mean'], props['std'])
+            # props['VaR_99_vc'] = norm.ppf(0.01, props['mean'], props['std'])
+            # props['VaR_95_hs'] = self.log_returns[stock].quantile(0.05)
+            # props['VaR_99_hs'] = self.log_returns[stock].quantile(0.01)
+            d = self.log_returns[stock][self.log_returns[stock] < 0]
+            # props['lt_z_mean'] = d.mean()
+            props['lt_z_med'] = d.median()
+            props['lt_z_std'] = d.std()
+            d = self.log_returns[stock][self.log_returns[stock] > 0]
+            # props['gt_z_mean'] = d.mean()
+            props['gt_z_med'] = d.median()
+            props['gt_z_std'] = d.std()
+
+
+
+            properties.append(props)
+        self.properties = pd.DataFrame(properties)
+
+
+
 
     def calc_ewma(self):
         self.ewm = pd.DataFrame()
@@ -61,7 +100,7 @@ class Downloader:
 
         self.df_distance = np.sqrt(2*(1-self.df_distance.corr()))
 
-    def returns_gt_threshold(self, pct_loc=1, pct_scale=2):
+    def returns_gt_threshold(self, pct_loc=1, pct_scale=1.82):
         dict_gt = {}
         for stock in self.stocks:
             loc, scale = norm.fit(data=self.log_returns[stock])
@@ -73,7 +112,7 @@ class Downloader:
     def describe(d: pd.DataFrame, loc, scale):
         return Describe(max=d.max(), mean=d.mean(), sum=d.sum(), min=d.min(), std=d.std(), loc=loc, scale=scale)
 
-    def returns_lt_threshold(self, pct_loc=1, pct_scale=2):
+    def returns_lt_threshold(self, pct_loc=1, pct_scale=1.82):
         dict_lt = {}
         for stock in self.stocks:
             loc, scale = norm.fit(data=self.log_returns[stock])
@@ -81,12 +120,19 @@ class Downloader:
             dict_lt[stock] = Downloader.describe(d, loc=loc, scale=scale)
         return dict_lt
 
-    def returns_in_range(self, min=0, max=2):
+
+    def returns_gt_zero(self):
+        return self.returns_gt_threshold(0,0)
+
+    def returns_lt_zero(self):
+        return self.returns_lt_threshold(0,0)
+
+    def returns_in_range(self, pct_loc= 1, min=0, max=2):
         dict_in_range = {}
         for stock in self.stocks:
             loc, scale = norm.fit(data=self.log_returns[stock])
             d = \
-                self.log_returns[stock][(self.log_returns[stock] >= loc - min*scale) & (self.log_returns[stock] <= loc + max*scale)]
+                self.log_returns[stock][(self.log_returns[stock] >= pct_loc*loc - min*scale) & (self.log_returns[stock] <= pct_loc*loc + max*scale)]
             dict_in_range[stock] = Downloader.describe(d, loc=loc, scale=scale)
         return dict_in_range
 
@@ -127,22 +173,22 @@ def distance_to_spy(distance):
 
     return dist
 
-
 def test():
 
     dwldr = Downloader()
+    dwldr.download()
 
-    yf_data = dwldr.download()
+    dwldr.calc_log_return()
+    dwldr.calc_props()
+    print(dwldr.properties)
 
-    print(dwldr.yf_data.head())
+    exit()
 
     dwldr.calc_ewma()
-    dwldr.calc_log_return()
     dwldr.calc_ewm_log_returns()
     dwldr.calc_dist()
-    gt = dwldr.returns_gt_threshold()
-    lt = dwldr.returns_lt_threshold()
-    in_r = dwldr.returns_in_range()
+    gt = dwldr.returns_gt_zero()
+    lt = dwldr.returns_lt_zero()
     hist = dwldr.create_histograms()
 
     # print(dwldr.ewm.head())
@@ -156,9 +202,8 @@ def test():
         factor['ticker'] = k
         factor['lt'] = np.abs(lt[k].mean)
         factor['gt'] = gt[k].mean
-        factor['in_range'] = in_r[k].mean
         factor['loc'] = gt[k].loc
-        factor['scale'] = gt[k].scale
+        factor['scale'] = lt[k].std
         factors.append(factor)
 
     # print(hist['AAPL'].pdf, hist['AAPL'].cdf, hist['AAPL'].x)
@@ -167,7 +212,6 @@ def test():
     df['lt'] = (1/df['lt'])/(1/df['lt']).sum()
     df['scale'] = (1/df['scale'])/(1/df['scale']).sum()
     df['gt'] = (df['gt'])/(df['gt']).sum()
-    df['in_range'] = (df['in_range'])/(df['in_range']).sum()
     df['loc'] = (df['loc'])/(df['loc']).sum()
 
     df.drop(index=0, axis=1, inplace=True)
@@ -177,16 +221,13 @@ def test():
     df = df.join(dist, rsuffix='dist')
     df['dist'] = (1/df['dist'])/(1/df['dist']).sum()
 
-    df['sum'] = df[['lt', 'gt', 'in_range', 'dist']].sum(axis=1)
+    df['sum'] = df[['lt', 'gt', 'dist']].sum(axis=1)
     df['sum'] = (df['sum'])/(df['sum']).sum()
 
     df = df.sort_values(by='sum')[10:]
-    df['sum'] = df[['lt', 'gt', 'in_range', 'dist']].sum(axis=1)
+    df['sum'] = df[['lt', 'gt',  'dist']].sum(axis=1)
     df['sum'] = (df['sum'])/(df['sum']).sum()
 
     print(df)
     # print(dist)
-
-
-
 test()
