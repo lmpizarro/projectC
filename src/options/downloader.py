@@ -66,10 +66,13 @@ class Downloader:
             props['gt_z_med'] = d.median()
             props['gt_z_std'] = d.std()
 
-
-
             properties.append(props)
+        df_dist_spy = self.distance_to_spy()
+        print(df_dist_spy)
+    
         self.properties = pd.DataFrame(properties)
+        self.properties.set_index('ticker', inplace=True)
+        self.properties = self.properties.join(df_dist_spy, rsuffix='dist')
 
 
 
@@ -150,6 +153,30 @@ class Downloader:
         for stock in self.stocks:
             dict_hist[stock] = Downloader.create_histogram(self.log_returns[stock])
         return dict_hist
+
+    def distance_to_spy(self):
+        self.calc_dist()
+        weights = []
+        tickers = list(self.df_distance.keys())
+        for i, k in enumerate(self.df_distance.keys()):
+            for j in range(i+1, len(self.df_distance.keys())):
+                c = k
+                r = self.df_distance.keys()[j]
+                weights.append((r, c, self.df_distance.loc[r][c]))
+
+
+        weights.sort(key=lambda a: a[2], reverse=True)
+        dist_to_spy = {'SPY':0}
+        for w in weights:
+            if w[0] == 'SPY' or w[1] == 'SPY':
+                dist_to_spy[w[0]] = [1/w[2]]
+
+        dist_to_spy = pd.DataFrame(dist_to_spy).T
+
+        dist_to_spy.rename(columns={0: 'dist'}, inplace=True)
+
+        return dist_to_spy
+
 
 def distance_to_spy(distance):
     weights = []
