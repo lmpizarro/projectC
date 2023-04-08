@@ -7,7 +7,26 @@ from scipy.stats import cauchy
 from fitters import *
 from scipy.interpolate import splrep, BSpline
 from sklearn import preprocessing
-from downloader import download_stocks, stocks
+import yfinance as yf
+
+stocks = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'BRK-B', 'TSLA', 'META', 'JNJ',
+        'V', 'TSM', 'XOM', 'UNH', 'WMT', 'JPM', 'MA', 'PG', 'LLY', 'CVX', 'HD',
+        'ASML', 'ABBV', 'SPY', 'QQQ', 'DIA', 'GLOB', 'MELI']
+
+stocks_ = ['TSM', 'XOM', 'JPM', 'CVX', 'TM', 'PFE', 'BAC', 'PG', 'KO', 'WFC']
+stocks_ = ['SPY', 'QQQ', 'DIA', 'KO', 'PG', 'TX', 'WMT', 'UNH']
+stocks_ = ['YPF', 'BMA', 'TX', 'PAM', 'EDN', 'GGAL', 'LOMA', 'TEO']
+stocks = ['JPM', 'WFC', 'BAC', 'HSBC', 'RY', 'TD', 'C', 'HDB', 'IBN', 'USB', 'PNC', 'SPY']
+
+def download_stocks_returns(stocks: list=stocks):
+    yf_data = yf.download(stocks, group_by=stocks, start='2017-01-01')
+    for stock in stocks:
+        pass_tuple = (stock, 'Adj Close')
+        yf_data[(stock, 'returns')] = yf_data[pass_tuple].pct_change()
+        yf_data[(stock, 'log_returns')] = np.log(yf_data[pass_tuple]/yf_data[pass_tuple].shift(1))
+        yf_data.dropna(inplace=True)
+
+    return yf_data
 
 
 def denoise_spl(x, y, s):
@@ -73,7 +92,8 @@ def calculate_factors(all_factors: dict):
     s_df = df_factors.sort_values(by=['all_sum'])
     print(s_df)
 
-yf_data = download_stocks()
+yf_data = download_stocks_returns()
+print(yf_data.head())
 
 all_factors = []
 for stock in stocks:

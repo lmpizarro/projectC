@@ -105,7 +105,7 @@ class Downloader:
             dict_hist[stock] = Downloader.create_histogram(self.log_returns[stock])
         return dict_hist
 
-def reduce_distance(distance):
+def distance_to_spy(distance):
     weights = []
     tickers = list(distance.keys())
     for i, k in enumerate(distance.keys()):
@@ -173,7 +173,7 @@ def test():
     df.drop(index=0, axis=1, inplace=True)
     df.set_index('ticker', inplace=True)
 
-    dist = reduce_distance(dwldr.df_distance)
+    dist = distance_to_spy(dwldr.df_distance)
     df = df.join(dist, rsuffix='dist')
     df['dist'] = (1/df['dist'])/(1/df['dist']).sum()
 
