@@ -81,20 +81,10 @@ def get_soup(ticker):
         return ticker, None, err
 
 from time import time as timer
-
-def scrap_sp500(folder:str, file_name:str, max_n:int = 10):
-
-    sp500 = create_sectors()
-    get_price_weight(sp500)
-    nasdaq100 = scrap_slick_chart(urls['nasdaq100'], {})
-    cedears = scrap_cedear_rava()
-
-    N_ticker = 0
-
+def get_all_soups(tickers: list):
     soups = {}
-
     start = timer()
-    for ticker in sp500:
+    for ticker in tickers:
         print(f'fetching soup ticker {ticker}')
         ticker, soup, error  = get_soup(ticker=ticker)
         if error is None:
@@ -102,6 +92,19 @@ def scrap_sp500(folder:str, file_name:str, max_n:int = 10):
         else:
             print(f'error fetching {ticker}')
     print("Elapsed Time: %s" % (timer() - start,))
+
+    return soups
+
+def scrap_sp500(folder:str, file_name:str, max_n:int = 10):
+
+    sp500_tickers = create_sectors()
+    get_price_weight(sp500_tickers)
+    nasdaq100 = scrap_slick_chart(urls['nasdaq100'], {})
+    cedears = scrap_cedear_rava()
+
+    N_ticker = 0
+
+    soups = get_all_soups(sp500_tickers)
 
     for ticker in soups:
         N_ticker += 1
@@ -119,17 +122,17 @@ def scrap_sp500(folder:str, file_name:str, max_n:int = 10):
                     if k == 'Index' and ticker in nasdaq100:
                         v = f'{v} NDQ100'
 
-                    if k not in sp500[ticker]:
-                        sp500[ticker][k] = v
+                    if k not in sp500_tickers[ticker]:
+                        sp500_tickers[ticker][k] = v
         except AttributeError as err:
             print(err)
 
 
-        sp500[ticker]['cedear'] = 1 if ticker in cedears else 0
+        sp500_tickers[ticker]['cedear'] = 1 if ticker in cedears else 0
         if N_ticker == max_n:
             break
 
-    df = pd.DataFrame.from_dict(sp500, orient='index')
+    df = pd.DataFrame.from_dict(sp500_tickers, orient='index')
     file_path = folder / file_name
 
     df.to_csv(file_path)
