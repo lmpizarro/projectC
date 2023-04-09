@@ -27,15 +27,16 @@ class Downloader:
         self.ewm_log_returns: pd.DataFrame
         self.df_distance: pd.DataFrame
         self.properties: pd.DataFrame
+        self.yf_data_close: pd.DataFrame
 
     def download(self):
-        self.yf_data = yf.download(self.stocks, start=self.start, auto_adjust=True)['Close']
-        self.yf_data.dropna(inplace=True)
+        self.yf_data_close = yf.download(self.stocks, start=self.start, auto_adjust=True)['Close']
+        self.yf_data_close.dropna(inplace=True)
 
     def calc_log_return(self):
         self.log_returns = pd.DataFrame()
         for stock in self.stocks:
-            self.log_returns[stock] = np.log(self.yf_data[stock]/self.yf_data[stock].shift(1))
+            self.log_returns[stock] = np.log(self.yf_data_close[stock]/self.yf_data_close[stock].shift(1))
 
         self.log_returns.dropna(inplace=True)
 
@@ -69,7 +70,7 @@ class Downloader:
             properties.append(props)
         df_dist_spy = self.distance_to_spy()
         print(df_dist_spy)
-    
+
         self.properties = pd.DataFrame(properties)
         self.properties.set_index('ticker', inplace=True)
         self.properties = self.properties.join(df_dist_spy, rsuffix='dist')
@@ -80,7 +81,7 @@ class Downloader:
     def calc_ewma(self):
         self.ewm = pd.DataFrame()
         for stock in self.stocks:
-            self.ewm[stock] = self.yf_data[stock].ewm(alpha=.9).mean()
+            self.ewm[stock] = self.yf_data_close[stock].ewm(alpha=.9).mean()
 
     def calc_ewm_log_returns(self):
         self.ewm_log_returns = pd.DataFrame()
@@ -90,7 +91,7 @@ class Downloader:
     def calc_dist(self) -> pd.DataFrame:
         self.df_distance = pd.DataFrame()
         for stock in self.stocks:
-            close = self.yf_data[stock]
+            close = self.yf_data_close[stock]
             log = np.log(close/close.shift(1))
             log.dropna(inplace=True)
 

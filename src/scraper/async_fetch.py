@@ -10,17 +10,10 @@ class FetchAsync:
         self.urls = urls
         self.responses = {}
 
-    def get_soups(self):
-        soups = {}
-        for url in self.responses:
-            soup = BeautifulSoup(self.responses[url].decode('utf-8'), features='lxml')
-            soups[url.split('=')[1]] = soup
-        return soups
-
 
     async def fetch(self, url, session):
         self.start_time[url] = default_timer()
-        choices =[4,6,8,10,12,14,16,18,20,22]
+        choices = range(2, 60, 5)
         choice = random.choice(choices)
         await asyncio.sleep(choice)
         async with session.get(url, headers={'User-Agent': 'Mozilla/5.0'}) as response:
@@ -50,8 +43,17 @@ class FetchAsync:
 
         print('Total time taken : ',  str(tot_elapsed))
 
+def get_urls(tickers: list):
+    return [f'https://finviz.com/quote.ashx?t={ticker}' for ticker in tickers]
 
 
+
+def get_soups(responses):
+    soups = {}
+    for url in responses:
+        soup = BeautifulSoup(responses[url].decode('utf-8'), features='lxml')
+        soups[url.split('=')[1]] = soup
+    return soups
 
 if __name__ == '__main__':
     urls = ['https://nytimes.com',
@@ -60,8 +62,8 @@ if __name__ == '__main__':
                 'https://reddit.com',
                 'https://producthunt.com']
 
-    urls = [f'https://finviz.com/quote.ashx?t={ticker}' for ticker in ['AAPL', 'F', 'T']]
+    urls = get_urls(['AAPL', 'F', 'T', 'TSM'])
 
     fa = FetchAsync(urls=urls)
     fa.fetch_async()
-    print(fa.get_soups())
+    print(get_soups(fa.responses))
