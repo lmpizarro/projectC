@@ -6,6 +6,9 @@ from scipy.stats import norm
 from scipy.stats import cauchy
 from collections import namedtuple
 from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import Normalizer
+from sklearn.pipeline import make_pipeline
+from sklearn.cluster import KMeans
 
 
 CDF = namedtuple("CDF", "x cdf pdf")
@@ -14,7 +17,9 @@ Describe = namedtuple('Describe', 'min max sum mean std loc scale')
 
 stocks = ['SPY', 'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'BRK-B', 'TSLA', 'META', 'JNJ',
         'V', 'TSM', 'XOM', 'UNH', 'WMT', 'JPM', 'MA', 'PG', 'LLY', 'CVX', 'HD',
-        'ASML', 'ABBV', 'GLOB', 'MELI']
+        'ASML', 'ABBV', 'GLOB', 'MELI', 'MRK', 'NVO', 'KO', 'AVGO', 'BABA', 'ORCL', 'PEP', 'PFE',
+        'PM', 'AZN', 'TMO', 'BAC', 'COST', 'NVS', 'CSCO', 'MCD', 'SHEL', 'CRM', 'NKE', 'ACN',
+        'DIS', 'TMUS', 'ABT', 'DHR', 'ADBE', 'LIN', 'VZ']
 
 stocks = stocks
 
@@ -74,8 +79,6 @@ class Downloader:
         self.properties = pd.DataFrame(properties)
         self.properties.set_index('ticker', inplace=True)
         self.properties = self.properties.join(df_dist_spy, rsuffix='dist')
-
-
 
 
     def calc_ewma(self):
@@ -209,6 +212,18 @@ def test():
     dwldr.calc_log_return()
     dwldr.calc_props()
     print(dwldr.properties)
+    normalizer = Normalizer()
+    kmeans = KMeans(n_clusters=10, max_iter=1000)
+    pipeline = make_pipeline(normalizer,kmeans)
+    pipeline.fit(dwldr.properties)
+
+    print(kmeans.inertia_)
+    labels = pipeline.predict(dwldr.properties)
+
+    df = pd.DataFrame({'labels': labels, 'companies': dwldr.properties.index})
+
+
+    print(print(df.sort_values('labels')))
 
     exit()
 
