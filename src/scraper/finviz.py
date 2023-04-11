@@ -2,6 +2,9 @@ import requests
 import copy
 from bs4 import BeautifulSoup
 import pandas as pd
+from collections import namedtuple
+
+Section = namedtuple("Sections", "url section")
 
 class FinViz:
 
@@ -18,23 +21,32 @@ class FinViz:
         df.rename(columns=maper, inplace=True)
         df.drop(0, inplace=True)
 
-        print(df.head())
+
+        return df
 
 
     @staticmethod
     def generate_urls_scrap_finviz():
-        index = [111, 121, 161, 131, 141, 171]
-        sub_title = ["overview", "valuation", "financial", "ownership", "performance", "technical"]
-        index_view = dict(zip(index, sub_title))
 
-        capital = {'mega': 21, 'large': 81, 'mid': 81, 'small': 81}
+        index = [111, 121, 161, 131, 141, 171]
+        sections = ["overview", "valuation", "financial", "ownership", "performance", "technical"]
+
+        index = [121, 161, 131, 141, 171]
+        sections = ["valuation", "financial"]
+        index_to_sections = dict(zip(index, sections))
+
+        company_sizes = {'mega': 21, 'large': 181, 'mid': 81, 'small': 81}
 
         urls = []
-        for j in capital:
-            for i in range(1, capital[j] + 1, 20):
-                for k in index_view:
-                    url = f'https://finviz.com/screener.ashx?v={k}&f=cap_{j}&ft=4&o=-marketcap&r={i}'
-                    urls.append(url)
+        for company_size in company_sizes:
+            for page in range(1, company_sizes[company_size] + 1, 20):
+                section_pages = []
+                for index_section in index_to_sections:
+                    section = index_to_sections[index_section]
+                    url = f'https://finviz.com/screener.ashx?v={index_section}&f=cap_{company_size}&ft=4&o=-marketcap&r={page}'
+                    section_pages.append(Section(url, section))
+
+                urls.append(section_pages)
 
         return urls
 
@@ -68,5 +80,19 @@ class FinViz:
 
 if __name__ == '__main__':
     urls = FinViz.generate_urls_scrap_finviz()
-    for url in urls:
-        FinViz.get_df_screener(url)
+    df = pd.DataFrame()
+    for sections in urls:
+        for section in sections:
+            if section.section == 'valuation':
+                keys = ['Ticker', 'P/E', 'P/B', 'P/S', 'PEG']
+                df1 = FinViz.get_df_screener(section.url)[keys]
+                df1.set_index('Ticker', inplace=True)
+            else:
+                keys = ['Ticker', 'Dividend', 'Debt/Eq']
+                df2 = FinViz.get_df_screener(section.url)[keys]
+                df2.set_index('Ticker', inplace=True)
+
+
+        df3 = df1.join(df2)
+        df = pd.concat([df,df3])
+    df.to_csv('factors.csv')
