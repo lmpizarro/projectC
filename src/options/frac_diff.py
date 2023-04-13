@@ -17,13 +17,24 @@ df_spy[['h', 'l', 'c', 'v']] = df_spy[['High', 'Low', 'Close', 'Volume']].shift(
 df_spy['r'] = np.log(df_spy['c']) - np.log(df_spy['c'].shift(1))
 df_spy['r2'] = np.power(df_spy['r'], 2)
 df_spy['r2'] = np.sqrt(df_spy['r2'].ewm(alpha=(1-0.97)).mean())
+df_spy['rsi'] = ta.RSI(df_spy['c'], timeperiod=14) / ta.RSI(df_spy['c'], timeperiod=14).mean()
 
 df_spy['f'] = fracDiff.FitTransform(df_spy['c'], parallel=True)
 df_spy.dropna(inplace=True)
-features = ['o', 'h', 'l', 'c', 'v', 'r', 'f', 'r2']
-print(df_spy[features].tail())
-plt.plot(df_spy['v'])
-plt.show()
+features = ['c','r2','rsi']
+print(df_spy[features].tail(8))
+
+limit_t = int(.75 * df_spy.shape[0])
+df_train = df_spy[:limit_t]
+df_test = df_spy[limit_t:]
+
+
+pipe = Pipeline([('scaler', StandardScaler()), ('reg', LinearRegression())])
+pipe.fit(df_train[features], df_train['Close'])
+sco = pipe.score(df_test[features], df_test['Close'])
+print(sco)
+print(pipe.predict(df_test[features])[-8:])
+print(df_test[['Close', 'c']].tail(9))
 exit()
 
 
