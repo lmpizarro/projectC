@@ -15,10 +15,15 @@ df_spy.dropna(inplace=True)
 df_spy['o'] = df_spy['Open']
 df_spy[['h', 'l', 'c', 'v']] = df_spy[['High', 'Low', 'Close', 'Volume']].shift(1)
 df_spy['r'] = np.log(df_spy['c']) - np.log(df_spy['c'].shift(1))
+df_spy['r2'] = np.power(df_spy['r'], 2)
+df_spy['r2'] = np.sqrt(df_spy['r2'].ewm(alpha=(1-0.97)).mean())
+
 df_spy['f'] = fracDiff.FitTransform(df_spy['c'], parallel=True)
 df_spy.dropna(inplace=True)
-features = ['o', 'h', 'l', 'c', 'v', 'r', 'f']
+features = ['o', 'h', 'l', 'c', 'v', 'r', 'f', 'r2']
 print(df_spy[features].tail())
+plt.plot(df_spy['v'])
+plt.show()
 exit()
 
 
