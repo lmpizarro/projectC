@@ -16,6 +16,11 @@ from sklearn.linear_model import (
 from sklearn import linear_model
 from sklearn.pipeline import make_pipeline
 from sklearn.metrics import mean_absolute_percentage_error, mean_squared_error, r2_score
+from sklearn.gaussian_process import GaussianProcessRegressor
+from sklearn.gaussian_process.kernels import DotProduct, WhiteKernel
+from sklearn.svm import SVR
+
+
 
 df_spy = yf.download("SPY", start="2008-01-01", auto_adjust=True)
 df_spy.dropna(inplace=True)
@@ -44,6 +49,7 @@ df_train = df_spy[:limit_t]
 df_test = df_spy[limit_t:]
 
 
+reg = SVR(C=1.0, epsilon=0.2)
 reg = BayesianRidge()
 reg = HuberRegressor()
 reg = linear_model.RANSACRegressor(random_state=42)
@@ -51,7 +57,6 @@ reg_ = linear_model.LassoLars(alpha=0.1)
 reg = linear_model.ARDRegression()
 reg = linear_model.TheilSenRegressor(random_state=42, max_iter=600)
 reg = LinearRegression()
-
 
 # pipe = Pipeline([('scaler', StandardScaler()), ('reg', BayesianRidge())])
 pipe = make_pipeline(StandardScaler(), reg)
@@ -71,56 +76,6 @@ print("mse ", mse)
 print("r2", r2s)
 print("mape", mape)
 print("sco", sco)
-exit()
-
-
-tickers = ["SPY", "AAPL"]
-
-
-dwldr = Downloader(start="2013-01-01", stocks=tickers)
-dwldr.download()
-dwldr.calc_log_return()
-
-print(dwldr.yf_data_close["SPY"].tail())
-print(dwldr.log_returns["SPY"].tail())
-
-ticker = "AAPL"
-df_calc = pd.DataFrame()
-df_calc["close"] = dwldr.yf_data_close[ticker].copy()[1:]
-df_calc["return"] = np.array(dwldr.log_returns[ticker].copy())
-df_calc["prev_return"] = df_calc["return"].shift(1)
-df_calc["prev_close"] = df_calc["close"].shift(1)
-df_calc["ewm_return"] = df_calc["prev_return"].ewm(alpha=0.5).mean()
-df_calc["ewm_close"] = df_calc["prev_close"].ewm(alpha=0.5).mean()
-df_calc["rsi_close"] = (
-    ta.RSI(df_calc["prev_close"], timeperiod=14)
-    / ta.RSI(df_calc["prev_close"], timeperiod=14).mean()
-)
-df_calc["frac"] = fracDiff.FitTransform(df_calc["prev_close"], parallel=True)
-df_calc["MOM"] = ta.MOM(df_calc["prev_close"], timeperiod=5)
-df_calc.dropna(inplace=True)
-
-features = [
-    "prev_return",
-    "prev_close",
-    "ewm_return",
-    "ewm_close",
-    "frac",
-    "rsi_close",
-    "MOM",
-]
-df_train = df_calc[:1600]
-df_test = df_calc[1600:]
-
-pipe = Pipeline([("scaler", StandardScaler()), ("reg", LinearRegression())])
-
-print(df_calc.tail(8))
-print(df_calc.shape)
-pipe.fit(df_train[features], df_train["close"])
-sco = pipe.score(df_test[features], df_test["close"])
-print(sco)
-print(pipe.get_params())
-print(pipe.predict(df_test[features])[-8:])
 
 """
 use linear regression to predict next price
