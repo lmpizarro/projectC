@@ -109,7 +109,9 @@ def variables_bcra(tipo='cer', desde='2016-04-20'):
         'badlar': {"Serie": "7935", "Detalle": "BADLAR en pesos de bancos privados (en  e.a.)"},
         'TEAPolMon': {"Serie": "7936", "Detalle": "Tasa de Política Monetaria (en  e.a.)"},
         'mayorista': {"Serie": "272", "Detalle": "Tipo de Cambio Mayorista ($ por US$) Comunicación A 3500 - Referencia"},
-        'TEAPF': {"Serie": "7939", "Detalle": "Tasa mínima para plazos fijos de personas humanas hasta $10 millones (en  e.a. para depósitos a 30 días)"}
+        'TEAPF': {"Serie": "7939", "Detalle": "Tasa mínima para plazos fijos de personas humanas hasta $10 millones (en  e.a. para depósitos a 30 días)"},
+        'inflacion': {"Serie": "7931", "Detalle": "Inflación mensual (variación en )"},
+        'inflacionIA': {"Serie": "7932", "Detalle": "Inflación interanual (variación en i.a.)"}
     }
     today = datetime.now().date()
     month = f'0{today.month}' if today.month >= 1 and today.month <= 9 else f'{today.month}'
@@ -131,24 +133,33 @@ def variables_bcra(tipo='cer', desde='2016-04-20'):
     df_cer = pd.read_html(r_text, thousands='.')[0]
 
     df_cer = df_cer.apply(lambda x: x.str.replace(',','.'))
+    df_cer['Fecha'] = pd.to_datetime(df_cer['Fecha'],format= '%d/%m/%Y' ).dt.date
     df_cer[['Valor']] = df_cer[['Valor']].astype('float64')
     df_cer.set_index('Fecha', inplace=True)
+    df_cer.rename(columns={'Valor': tipo}, inplace=True)
     return df_cer
 
-df_cer = variables_bcra('cer')
-print(df_cer.head())
+import matplotlib.pyplot as plt
+# df_cer = variables_bcra('cer')
+# print(df_cer.head())
+# print(df_cer.tail())
+df_cer = variables_bcra('inflacion', desde='2015-12-17')
+
 print(df_cer.tail())
+plt.plot(df_cer)
+plt.show()
 
 
-df_cer = variables_bcra('mayorista')
-print(df_cer.head())
-print(df_cer.tail())
+
+# df_cer = variables_bcra('mayorista')
+# # print(df_cer.head())
+# print(df_cer.tail())
 
 import yfinance as yf
 
 tickers = ['GGAL', 'GGAL.BA', 'AAPL.BA', 'AAPL', 'ARS=X']
 
-df_close = yf.download(tickers, start="2018-04-20", auto_adjust=True)['Close']
+df_close = yf.download(tickers, start="2012-04-20", auto_adjust=True)['Close']
 df_close['ccl1'] = 10 * df_close['GGAL.BA'] / df_close['GGAL']
 df_close['ccl2'] = 10 * df_close['AAPL.BA'] / df_close['AAPL']
 df_close['ccl'] = .5*(df_close.ccl1 + df_close.ccl2)
@@ -158,7 +169,8 @@ df_close.dropna(inplace=True)
 
 print(df_close.head())
 print(df_close.tail())
-import matplotlib.pyplot as plt
 
+exit()
 plt.plot(df_close.gap)
+plt.plot(df_close.gap.rolling(200).mean())
 plt.show()
