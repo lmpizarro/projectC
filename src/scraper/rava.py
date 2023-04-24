@@ -157,20 +157,23 @@ plt.show()
 
 import yfinance as yf
 
-tickers = ['GGAL', 'GGAL.BA', 'AAPL.BA', 'AAPL', 'ARS=X']
+def ccl_gap():
+    tickers = ['GGAL', 'GGAL.BA', 'AAPL.BA', 'AAPL', 'ARS=X']
+    df_close = yf.download(tickers, start="2012-04-20", auto_adjust=True)['Close']
+    df_close['ccl1'] = 10 * df_close['GGAL.BA'] / df_close['GGAL']
+    df_close['ccl2'] = 10 * df_close['AAPL.BA'] / df_close['AAPL']
+    df_close['ccl'] = .5*(df_close.ccl1 + df_close.ccl2)
+    df_close = df_close[['ccl', 'ARS=X']]
+    df_close['gap'] = (df_close['ccl'] - df_close['ARS=X']) / df_close['ARS=X']
+    df_close.dropna(inplace=True)
 
-df_close = yf.download(tickers, start="2012-04-20", auto_adjust=True)['Close']
-df_close['ccl1'] = 10 * df_close['GGAL.BA'] / df_close['GGAL']
-df_close['ccl2'] = 10 * df_close['AAPL.BA'] / df_close['AAPL']
-df_close['ccl'] = .5*(df_close.ccl1 + df_close.ccl2)
-df_close = df_close[['ccl', 'ARS=X']]
-df_close['gap'] = (df_close['ccl'] - df_close['ARS=X']) / df_close['ARS=X']
-df_close.dropna(inplace=True)
+    return df_close
 
-print(df_close.head())
-print(df_close.tail())
+df_ccl = ccl_gap()
 
-exit()
-plt.plot(df_close.gap)
-plt.plot(df_close.gap.rolling(200).mean())
+print(df_ccl.head())
+print(df_ccl.tail())
+
+plt.plot(df_ccl.gap)
+plt.plot(df_ccl.gap.rolling(200).mean())
 plt.show()
