@@ -1,3 +1,4 @@
+"""obtiene todos los valores de los bonos en bonistas"""
 from config import urls
 import pandas as pd
 from joblib import Parallel, delayed
