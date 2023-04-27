@@ -184,47 +184,53 @@ def ccl_gap():
 
     return df_close
 
+class USBonds:
+    def __init__(self, year: int = 2023) -> None:
+        self.year = year
 
-def treasury(year: int = 2023):
-    terms = [
-        "1 Mo",
-        "2 Mo",
-        "3 Mo",
-        "4 Mo",
-        "6 Mo",
-        "1 Yr",
-        "2 Yr",
-        "3 Yr",
-        "5 Yr",
-        "7 Yr",
-        "10 Yr",
-        "20 Yr",
-        "30 Yr",
-    ]
+    def treasury_yield_curve(self):
+        string_terms = [
+            "1 Mo",
+            "2 Mo",
+            "3 Mo",
+            "4 Mo",
+            "6 Mo",
+            "1 Yr",
+            "2 Yr",
+            "3 Yr",
+            "5 Yr",
+            "7 Yr",
+            "10 Yr",
+            "20 Yr",
+            "30 Yr",
+        ]
 
-    resp = requests.get(
-        url_treasury_by_year(year=year), headers={"User-Agent": "Mozilla/5.0"}
-    )
-    treas_df = pd.read_html(resp.text)
+        resp = requests.get(
+            url_treasury_by_year(year=self.year), headers={"User-Agent": "Mozilla/5.0"}
+        )
+        treas_df = pd.read_html(resp.text)
 
-    filter_keys = ["Date"]
-    filter_keys.extend(terms)
-    treas_df = treas_df[0][filter_keys]
+        filter_keys = ["Date"]
+        filter_keys.extend(string_terms)
+        treas_df = treas_df[0][filter_keys]
 
-    def spliter(r: str):
-        s = r.split(" ")
-        if s[1] == "Mo":
-            d = 30
-        else:
-            d = 365
-        k = int(s[0])
+        def spliter(r: str):
+            s = r.split(" ")
+            if s[1] == "Mo":
+                d = 30
+            else:
+                d = 365
+            k = int(s[0])
 
-        return d * k
+            return d * k
 
-    treas_df["Date"] = pd.to_datetime(treas_df["Date"], format="%m/%d/%Y").dt.date
-    treas_df.rename(columns={r: spliter(r) for r in terms}, inplace=True)
+        treas_df["Date"] = pd.to_datetime(treas_df["Date"], format="%m/%d/%Y").dt.date
+        string_term_to_days_term = {r: spliter(r) for r in string_terms}
+        days_term = string_term_to_days_term.values()
+        treas_df.rename(columns=string_term_to_days_term, inplace=True)
+        treas_df['mean'] = treas_df[days_term].mean(axis=1)
 
-    return treas_df
+        return treas_df
 
 
 def test_ccl():
@@ -253,7 +259,10 @@ def test_ccl():
     plt.show()
 
 import numpy as np
-df_treas = treasury()
+usbond = USBonds()
+df_treas = usbond.treasury_yield_curve()
+print(df_treas.tail())
+
 terms = np.array(list(df_treas.keys())[1:-3])
 rates = np.array(list(df_treas.tail().iloc[-1])[1:-3])
 daily_rates = rates / 365
