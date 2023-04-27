@@ -3,7 +3,53 @@ from datetime import date, timedelta, datetime, time
 from dateutil import tz
 import numpy_financial as npf
 
+import pandas as pd
+
 DAYS_IN_YEAR = 360
+
+
+class BondSimulator:
+    def __init__(
+        self,
+        description: pd.DataFrame,
+        ref_date: date = datetime.now().date(),
+        value=20,
+    ) -> None:
+        self.description = description
+        self.ref_date = ref_date
+        self.value = value
+
+        self.update(ref_date=ref_date)
+        self.create()
+        self.delta_ts(self.ref_date)
+
+
+    def update(self, ref_date: date):
+        self.current_bond = self.description[
+            self.description.fecha >= ref_date
+        ]
+
+    def create(self):
+        self.amortizations = self.current_bond["amort"].to_numpy()
+        self.coupons = self.current_bond["interes"].to_numpy()
+        self.pays = self.coupons + self.amortizations
+        self.dates = list(self.current_bond["fecha"])
+
+    def delta_ts(self, ref_date: date):
+        self.time_to_pay = np.array(
+            [(e - ref_date).days / DAYS_IN_YEAR for e in self.dates if e >= ref_date]
+        )
+
+    def increment(self, incr: int):
+        ref_date = self.ref_date + timedelta(days=incr)
+        return ref_date
+
+    def process(self, incr: int, yeld: float):
+        ref_date = self.increment(incr=incr)
+        self.update(self.increment(incr=incr))
+        self.create()
+        self.delta_ts(ref_date)
+        return (np.exp(-yeld * self.time_to_pay) * self.pays).sum()
 
 
 class Zero:
@@ -80,6 +126,14 @@ class Bullet:
             guess=0.5,
         )
 
+        self._description = pd.DataFrame(
+            {"fecha": self.dates, "interes": self.coupons, "amort": self.amortizations}
+        )[1:]
+
+    @property
+    def description(self):
+        return self._description
+
 
 """
 https://pypi.org/project/bond-pricing/
@@ -110,52 +164,22 @@ class Ba37D:
         value=20,
     ) -> None:
         self.ref_date = ref_date
-        self.bond_description = pd.read_csv(csv_name, sep=",")[
+        self._description = pd.read_csv(csv_name, sep=",")[
             ["fecha", "interes", "amort"]
         ]
-        self.bond_description["fecha"] = pd.to_datetime(
-            self.bond_description["fecha"], format="%d/%m/%Y"
+        self._description["fecha"] = pd.to_datetime(
+            self._description["fecha"], format="%d/%m/%Y"
         ).dt.date
-        self.update(ref_date=ref_date)
-        self.create()
 
-        self.delta_ts(self.ref_date)
-
-    def update(self, ref_date: date):
-        self.current_bond = self.bond_description[
-            self.bond_description.fecha >= ref_date
-        ]
-
-    def create(self):
-        self.amortizations = self.current_bond["amort"].to_numpy()
-        self.coupons = self.current_bond["interes"].to_numpy()
-        self.pays = self.coupons + self.amortizations
-        self.dates = list(self.current_bond["fecha"])
-
-    def delta_ts(self, ref_date: date):
-        self.time_to_pay = np.array(
-            [(e - ref_date).days / DAYS_IN_YEAR for e in self.dates if e >= ref_date]
-        )
-
-    def increment(self, incr: int):
-        ref_date = self.ref_date + timedelta(days=incr)
-        return ref_date
-
-    def process(self, incr: int, yeld: float):
-        ref_date = self.increment(incr=incr)
-        self.update(self.increment(incr=incr))
-        self.create()
-        self.delta_ts(ref_date)
-        return (np.exp(-yeld * self.time_to_pay) * self.pays).sum()
-
+    @property
+    def description(self):
+        return self._description
 
 ba37 = Ba37D()
 
-print(ba37.dates)
+bond = BondSimulator(bullet.description)
 
-print(ba37.time_to_pay)
-
-prices = [ba37.process(i, yeld=0.05)for i in range(5242)]
+prices = [bond.process(i, yeld=0.05) for i in range(5242)]
 import matplotlib.pyplot as plt
 
 plt.plot(prices)
