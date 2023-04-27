@@ -5,7 +5,7 @@ import numpy_financial as npf
 
 import pandas as pd
 
-DAYS_IN_YEAR = 360
+DAYS_IN_YEAR = 365
 
 
 class BondSimulator:
@@ -18,6 +18,7 @@ class BondSimulator:
         self.description = description
         self.ref_date = ref_date
         self.value = value
+        self.max_iter: int = 0
 
         self.update(ref_date=ref_date)
         self.create()
@@ -39,17 +40,19 @@ class BondSimulator:
         self.time_to_pay = np.array(
             [(e - ref_date).days / DAYS_IN_YEAR for e in self.dates if e >= ref_date]
         )
+        self.max_iter = int(self.time_to_pay[-1] * DAYS_IN_YEAR + 1)
 
     def increment(self, incr: int):
         ref_date = self.ref_date + timedelta(days=incr)
         return ref_date
 
-    def process(self, incr: int, yeld: float):
+    def process(self, incr: int, yeld: float, pays_per_year: int = 2):
         ref_date = self.increment(incr=incr)
         self.update(self.increment(incr=incr))
         self.create()
         self.delta_ts(ref_date)
-        return (np.exp(-yeld * self.time_to_pay) * self.pays).sum()
+        # (np.exp(-yeld * self.time_to_pay) * self.pays).sum()
+        return (np.power(1 + yeld/pays_per_year, -pays_per_year*self.time_to_pay) * self.pays).sum()
 
 
 class Zero:
@@ -84,7 +87,7 @@ class Zero:
 class Bullet:
     def __init__(
         self,
-        begin_date="2023-05-01",
+        begin_date="2023-04-27",
         years_to_end=3,
         periodicity=0.5,
         nominal_yield=0.1,
@@ -100,10 +103,8 @@ class Bullet:
         self.begin_date = datetime.combine(
             begin_date, time=time(0, 0, 0), tzinfo=tz.UTC
         )
-        self.delta_time_pays = timedelta(seconds=periodicity * DAYS_IN_YEAR * 24 * 3600)
-        self.delta_time_to_end = timedelta(
-            seconds=years_to_end * DAYS_IN_YEAR * 24 * 3600
-        )
+        self.delta_time_pays = timedelta(days=periodicity * DAYS_IN_YEAR)
+        self.delta_time_to_end = timedelta(days=years_to_end*DAYS_IN_YEAR)
         self.create()
 
     def create(self):
@@ -170,16 +171,18 @@ class Ba37D:
         self._description["fecha"] = pd.to_datetime(
             self._description["fecha"], format="%d/%m/%Y"
         ).dt.date
+        self._description['interes'] = self._description['interes'] / 2
 
     @property
     def description(self):
         return self._description
 
 ba37 = Ba37D()
+print(ba37.description.sum())
 
-bond = BondSimulator(bullet.description)
+bond = BondSimulator(ba37.description)
 
-prices = [bond.process(i, yeld=0.05) for i in range(5242)]
+prices = [bond.process(i, yeld=0.3352) for i in range(bond.max_iter)]
 import matplotlib.pyplot as plt
 
 plt.plot(prices)
