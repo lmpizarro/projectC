@@ -182,8 +182,20 @@ print(ba37.description.sum())
 
 bond = BondSimulator(ba37.description)
 
-prices = [bond.process(i, yeld=0.3352) for i in range(bond.max_iter)]
+prices1 = [bond.process(i, yeld=0.3321-.01) for i in range(365)]
+
+prices2 = [bond.process(i, yeld=0.3321) for i in range(365)]
+prices3 = [bond.process(i, yeld=0.3321+.01) for i in range(365)]
+
+rates = np.linspace(.01, 1.01, 100)
+
+prices3 = [bond.process(180, yeld=e) for e in rates]
+prices2 = [bond.process(360, yeld=e) for e in rates]
+prices1 = [bond.process(3000, yeld=e) for e in rates]
+
 import matplotlib.pyplot as plt
 
-plt.plot(prices)
+plt.plot(rates, prices1)
+plt.plot(rates, prices2)
+plt.plot(rates, prices3)
 plt.show()
