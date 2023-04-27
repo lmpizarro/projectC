@@ -77,8 +77,9 @@ class Bullet:
             pmt=self.nominal_yield,
             pv=-self.value,
             fv=self.face_value,
-            guess=.5
+            guess=0.5,
         )
+
 
 """
 https://pypi.org/project/bond-pricing/
@@ -97,3 +98,64 @@ for i, e in enumerate(zc.dates):
     print(e, zc.coupons[i], zc.amortizations[i])
 
 print(zc.tir)
+
+import pandas as pd
+
+
+class Ba37D:
+    def __init__(
+        self,
+        csv_name: str = "ba37d.csv",
+        ref_date: date = datetime.now().date(),
+        value=20,
+    ) -> None:
+        self.ref_date = ref_date
+        self.bond_description = pd.read_csv(csv_name, sep=",")[
+            ["fecha", "interes", "amort"]
+        ]
+        self.bond_description["fecha"] = pd.to_datetime(
+            self.bond_description["fecha"], format="%d/%m/%Y"
+        ).dt.date
+        self.update(ref_date=ref_date)
+        self.create()
+
+        self.delta_ts(self.ref_date)
+
+    def update(self, ref_date: date):
+        self.current_bond = self.bond_description[
+            self.bond_description.fecha >= ref_date
+        ]
+
+
+    def create(self):
+        self.amortizations = self.current_bond["amort"].to_numpy()
+        self.coupons = self.current_bond["interes"].to_numpy()
+        self.pays = self.coupons + self.amortizations
+        self.dates = list(self.current_bond["fecha"])
+
+    def delta_ts(self, ref_date: date):
+        self.time_to_pay = [e - ref_date for e in self.dates if e >= ref_date]
+
+
+    def increment(self, incr: int):
+        ref_date = self.ref_date + timedelta(days=incr)
+        return ref_date
+
+
+    def process(self, incr: int):
+        ref_date = self.increment(incr=incr)
+        self.update(self.increment(incr=incr))
+        self.create()
+        self.delta_ts(ref_date)
+
+
+
+ba37 = Ba37D()
+
+print(ba37.dates)
+
+print(ba37.time_to_pay)
+
+ba37.process(2)
+
+print(ba37.time_to_pay)
