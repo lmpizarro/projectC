@@ -187,6 +187,7 @@ def ccl_gap():
 class USBonds:
     def __init__(self, year: int = 2023) -> None:
         self.year = year
+        self.yield_curve = self.treasury_yield_curve()
 
     def treasury_yield_curve(self):
         string_terms = [
@@ -229,9 +230,23 @@ class USBonds:
         days_term = string_term_to_days_term.values()
         treas_df.rename(columns=string_term_to_days_term, inplace=True)
         treas_df['mean'] = treas_df[days_term].mean(axis=1)
+        treas_df.set_index('Date', inplace=True)
 
         return treas_df
 
+    def today_mean(self):
+        today_year = datetime.now().year
+        if self.year != today_year:
+            self.year = today_year
+            self.yield_curve = self.treasury_yield_curve()
+        return self.yield_curve['mean'].iloc[-1]
+
+    def last_curve_points(self):
+
+        terms = np.array(list(self.yield_curve.keys())[0:-1])
+        rates = np.array(list(self.yield_curve.tail().iloc[-1])[0:-1])
+
+        return terms, rates
 
 def test_ccl():
     import matplotlib.pyplot as plt
@@ -260,19 +275,21 @@ def test_ccl():
 
 import numpy as np
 usbond = USBonds()
-df_treas = usbond.treasury_yield_curve()
+df_treas = usbond.yield_curve
 print(df_treas.tail())
+print(usbond.today_mean())
+terms, rates = usbond.last_curve_points()
 
-terms = np.array(list(df_treas.keys())[1:-3])
-rates = np.array(list(df_treas.tail().iloc[-1])[1:-3])
 daily_rates = rates / 365
 term_rates = daily_rates * terms
 
-print(term_rates)
 print(terms)
-
+print(rates)
 
 import matplotlib.pyplot as plt
+
+plt.plot(df_treas['mean'])
+plt.show()
 
 plt.plot(terms, rates)
 plt.show()

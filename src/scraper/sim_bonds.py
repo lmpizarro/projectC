@@ -51,8 +51,9 @@ class BondSimulator:
         self.update(self.increment(incr=incr))
         self.create()
         self.delta_ts(ref_date)
-        # (np.exp(-yeld * self.time_to_pay) * self.pays).sum()
-        return (np.power(1 + yeld/pays_per_year, -pays_per_year*self.time_to_pay) * self.pays).sum()
+        Rc = pays_per_year * np.log(1+yeld/pays_per_year)
+        return (np.exp(-Rc * self.time_to_pay) * self.pays).sum()
+        # return (np.power(1 + yeld/pays_per_year, -pays_per_year*self.time_to_pay) * self.pays).sum()
 
 
 class Zero:
@@ -87,23 +88,23 @@ class Zero:
 class Bullet:
     def __init__(
         self,
-        begin_date="2023-04-27",
+        emission_date="2023-04-27",
         years_to_end=3,
-        periodicity=0.5,
+        compounding=2,
         nominal_yield=0.1,
         face_value=100,
         value=90,
     ) -> None:
-        self.periodicity = periodicity
+        self.periodicity = compounding
         self.nominal_yield = nominal_yield
         self.face_value = face_value
         self.value = value
 
-        begin_date = date.fromisoformat(begin_date)
+        emission_date = date.fromisoformat(emission_date)
         self.begin_date = datetime.combine(
-            begin_date, time=time(0, 0, 0), tzinfo=tz.UTC
+            emission_date, time=time(0, 0, 0), tzinfo=tz.UTC
         )
-        self.delta_time_pays = timedelta(days=periodicity * DAYS_IN_YEAR)
+        self.delta_time_pays = timedelta(days=DAYS_IN_YEAR/self.periodicity)
         self.delta_time_to_end = timedelta(days=years_to_end*DAYS_IN_YEAR)
         self.create()
 
@@ -114,7 +115,7 @@ class Bullet:
         self.amortizations = [-self.value]
         while self.dates[i] < self.begin_date + self.delta_time_to_end:
             self.dates.append(self.dates[i] + self.delta_time_pays)
-            self.coupons.append(self.face_value * self.nominal_yield * self.periodicity)
+            self.coupons.append(self.face_value * self.nominal_yield / self.periodicity)
             self.amortizations.append(0)
             i += 1
         self.amortizations[-1] = self.face_value
@@ -180,20 +181,22 @@ class Ba37D:
 ba37 = Ba37D()
 print(ba37.description.sum())
 
-bond = BondSimulator(ba37.description)
+bond = BondSimulator(bullet.description)
 
-prices1 = [bond.process(i, yeld=0.3321-.01) for i in range(365)]
+prices1 = [bond.process(i, yeld=0.1) for i in range(bond.max_iter)]
 
-prices2 = [bond.process(i, yeld=0.3321) for i in range(365)]
-prices3 = [bond.process(i, yeld=0.3321+.01) for i in range(365)]
+prices2 = [bond.process(i, yeld=0.3321) for i in range(bond.max_iter)]
+prices3 = [bond.process(i, yeld=0.3321+.01) for i in range(bond.max_iter)]
 
+import matplotlib.pyplot as plt
+plt.plot(prices1)
+plt.show()
 rates = np.linspace(.01, 1.01, 100)
 
 prices3 = [bond.process(180, yeld=e) for e in rates]
 prices2 = [bond.process(360, yeld=e) for e in rates]
-prices1 = [bond.process(3000, yeld=e) for e in rates]
+prices1 = [bond.process(300, yeld=e) for e in rates]
 
-import matplotlib.pyplot as plt
 
 plt.plot(rates, prices1)
 plt.plot(rates, prices2)
