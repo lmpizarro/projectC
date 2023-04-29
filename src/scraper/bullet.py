@@ -5,9 +5,9 @@ DAYS_IN_A_YEAR = 365
 
 
 class RateGenerators:
-    def __init__(self, years: np.ndarray, compound: int = 2, endpoint=False) -> None:
+    def __init__(self, years: int, compound: int = 2, endpoint=False) -> None:
         self._time = np.linspace(
-            1 / DAYS_IN_A_YEAR, years, DAYS_IN_A_YEAR * years, endpoint=endpoint
+            1 / DAYS_IN_A_YEAR, years, int(DAYS_IN_A_YEAR * years), endpoint=endpoint
         )
         self._compound = compound
 
@@ -43,8 +43,8 @@ class RateGenerators:
     def continuous_to_discrete(rates: np.ndarray, compound: int) -> np.ndarray:
         return compound * (np.exp(rates / compound) - 1)
 
-    def sin_rate(self, rate: float = 0.1, amplitude: float = 0.02) -> np.ndarray:
-        rates = np.sin(2 * np.pi * self.time / self.time[-1]) * amplitude + rate
+    def sin_rate(self, rate: float = 0.1, amplitude: float = 0.02, cycles:float = 1) -> np.ndarray:
+        rates = np.sin(2 * np.pi * self.time * cycles / self.time[-1]) * amplitude + rate
 
         return RateGenerators.discrete_to_continuous(
             rates=rates, compound=self.compound
@@ -53,7 +53,7 @@ class RateGenerators:
 
 years = 2
 compound = 4
-year_rate = 0.1
+year_rate = 0.05
 
 n_payments = years * compound
 coupon_rate = year_rate / compound
@@ -63,15 +63,16 @@ coupons = np.ones(n_payments) * coupon_rate
 amortizations = np.zeros(n_payments)
 amortizations[n_payments - 1] = 1
 description = np.asarray([times, coupons, amortizations, coupons + amortizations])
-
-
-rate = 0.1
-
+from sim_bonds import Ba37D
+bond = Ba37D()
+description = bond.np_description
+years = bond.maturity
+compound = bond.compound
 tg = RateGenerators(years=years, compound=compound)
 
-rcs = tg.sin_rate()
+rcs = tg.sin_rate(cycles=2, amplitude=0.01)
 rcs_ = tg.exp_rate()
-rcs_ = tg.constant_rate()
+rcs = tg.constant_rate()
 
 
 def npv_time(description: np.ndarray, time: np.ndarray, rates: np.ndarray, indx: int) -> float:

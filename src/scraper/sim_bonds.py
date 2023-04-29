@@ -3,6 +3,9 @@ from datetime import date, timedelta, datetime, time
 from dateutil import tz
 import numpy_financial as npf
 
+
+import matplotlib.pyplot as plt
+
 import pandas as pd
 
 DAYS_IN_YEAR = 365
@@ -24,11 +27,8 @@ class BondSimulator:
         self.create()
         self.delta_ts(self.ref_date)
 
-
     def update(self, ref_date: date):
-        self.current_bond = self.description[
-            self.description.fecha >= ref_date
-        ]
+        self.current_bond = self.description[self.description.fecha >= ref_date]
 
     def create(self):
         self.amortizations = self.current_bond["amort"].to_numpy()
@@ -51,7 +51,7 @@ class BondSimulator:
         self.update(self.increment(incr=incr))
         self.create()
         self.delta_ts(ref_date)
-        Rc = pays_per_year * np.log(1+yeld/pays_per_year)
+        Rc = pays_per_year * np.log(1 + yeld / pays_per_year)
         return (np.exp(-Rc * self.time_to_pay) * self.pays).sum()
         # return (np.power(1 + yeld/pays_per_year, -pays_per_year*self.time_to_pay) * self.pays).sum()
 
@@ -104,8 +104,8 @@ class Bullet:
         self.begin_date = datetime.combine(
             emission_date, time=time(0, 0, 0), tzinfo=tz.UTC
         )
-        self.delta_time_pays = timedelta(days=DAYS_IN_YEAR/self.periodicity)
-        self.delta_time_to_end = timedelta(days=years_to_end*DAYS_IN_YEAR)
+        self.delta_time_pays = timedelta(days=DAYS_IN_YEAR / self.periodicity)
+        self.delta_time_to_end = timedelta(days=years_to_end * DAYS_IN_YEAR)
         self.create()
 
     def create(self):
@@ -166,44 +166,60 @@ class Ba37D:
         value=20,
     ) -> None:
         self.ref_date = ref_date
+        self.compound = 2
         self._description = pd.read_csv(csv_name, sep=",")[
             ["fecha", "interes", "amort"]
         ]
         self._description["fecha"] = pd.to_datetime(
             self._description["fecha"], format="%d/%m/%Y"
         ).dt.date
-        self._description['interes'] = self._description['interes'] / 2
+        self._description["interes"] = self._description["interes"] / 2
 
-        self._description['times'] = (self._description['fecha'] - self.ref_date).dt.days / DAYS_IN_YEAR
-        self._description  = self._description[self._description['times'] > 0]
+        self._description["times"] = (
+            self._description["fecha"] - self.ref_date
+        ).dt.days / DAYS_IN_YEAR
+        self._description = self._description[self._description["times"] > 0]
 
-        
+        self._np_description = np.asarray([
+            self._description.times, self._description.interes, self._description.amort,
+            self._description.interes + self._description.amort
+        ])
+        self.maturity = self._description.times.iloc[-1]
+
     @property
     def description(self):
         return self._description
 
-ba37 = Ba37D()
-print(ba37.description)
-exit()
+    @property
+    def np_description(self):
+        return self._np_description
 
-bond = BondSimulator(bullet.description)
+def test():
+    ba37 = Ba37D()
+    print(ba37.description)
+    print(ba37.np_description)
+    plt.bar(ba37.np_description[0], ba37.np_description[3], width=.2)
+    plt.show()
+    exit()
 
-prices1 = [bond.process(i, yeld=0.1) for i in range(bond.max_iter)]
+    bond = BondSimulator(bullet.description)
 
-prices2 = [bond.process(i, yeld=0.3321) for i in range(bond.max_iter)]
-prices3 = [bond.process(i, yeld=0.3321+.01) for i in range(bond.max_iter)]
+    prices1 = [bond.process(i, yeld=0.1) for i in range(bond.max_iter)]
 
-import matplotlib.pyplot as plt
-plt.plot(prices1)
-plt.show()
-rates = np.linspace(.01, 1.01, 100)
-
-prices3 = [bond.process(180, yeld=e) for e in rates]
-prices2 = [bond.process(360, yeld=e) for e in rates]
-prices1 = [bond.process(300, yeld=e) for e in rates]
+    prices2 = [bond.process(i, yeld=0.3321) for i in range(bond.max_iter)]
+    prices3 = [bond.process(i, yeld=0.3321 + 0.01) for i in range(bond.max_iter)]
 
 
-plt.plot(rates, prices1)
-plt.plot(rates, prices2)
-plt.plot(rates, prices3)
-plt.show()
+    plt.plot(prices1)
+    plt.show()
+    rates = np.linspace(0.01, 1.01, 100)
+
+    prices3 = [bond.process(180, yeld=e) for e in rates]
+    prices2 = [bond.process(360, yeld=e) for e in rates]
+    prices1 = [bond.process(300, yeld=e) for e in rates]
+
+
+    plt.plot(rates, prices1)
+    plt.plot(rates, prices2)
+    plt.plot(rates, prices3)
+    plt.show()
