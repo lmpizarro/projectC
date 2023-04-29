@@ -7,7 +7,7 @@ DAYS_IN_A_YEAR = 365
 class RateGenerators:
     def __init__(self, years: int, compound: int = 2, endpoint=False) -> None:
         self._time = np.linspace(
-            1 / DAYS_IN_A_YEAR, years, int(DAYS_IN_A_YEAR * years), endpoint=endpoint
+            1 / DAYS_IN_A_YEAR, years, int(np.ceil(DAYS_IN_A_YEAR * years)), endpoint=endpoint
         )
         self._compound = compound
 
