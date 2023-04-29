@@ -29,10 +29,18 @@ def exp_rate(time, rate: float=.1, speed: float = -4):
     rcs = compound * np.log(1 +  rates / compound)
     return rcs
 
+import matplotlib.pyplot as plt
+
+def sin_rate(time, rate: float=.1, amplitude: float = .02):
+    rates = np.sin(2*np.pi * time / time[-1])*amplitude + rate
+
+    rcs = compound * np.log(1 +  rates / compound)
+    return rcs
 
 
 time = np.linspace(1/365, years, 365*years, endpoint=False )
-rcs = exp_rate(time=time)
+rcs = sin_rate(time=time)
+rcs_ = exp_rate(time=time)
 npvs = np.zeros(time.shape)
 for i in range(time.shape[0]):
     remaining = description[0] - time[i]
@@ -43,7 +51,6 @@ for i in range(time.shape[0]):
     npv = np.exp(-remaining*rcs[i]) * pays
     npvs[i] = npv.sum()
 
-import matplotlib.pyplot as plt
 plt.plot(npvs)
 plt.show()
 plt.plot(rcs)
