@@ -5,9 +5,9 @@ DAYS_IN_A_YEAR = 365
 
 
 class RateGenerators:
-    def __init__(self, years: np.ndarray, compound: int = 2) -> None:
+    def __init__(self, years: np.ndarray, compound: int = 2, endpoint=False) -> None:
         self._time = np.linspace(
-            1 / DAYS_IN_A_YEAR, years, DAYS_IN_A_YEAR * years, endpoint=False
+            1 / DAYS_IN_A_YEAR, years, DAYS_IN_A_YEAR * years, endpoint=endpoint
         )
         self._compound = compound
 
@@ -51,17 +51,19 @@ class RateGenerators:
         )
 
 
-years = 3
+years = 2
 compound = 4
 year_rate = 0.1
 
-n_pays = years * compound
-coupon = year_rate / compound
-times = np.linspace(1 / compound, years, n_pays)
-coupons = np.ones(n_pays) * coupon
-amortizations = np.zeros(n_pays)
-amortizations[n_pays - 1] = 1
+n_payments = years * compound
+coupon_rate = year_rate / compound
+
+times = np.linspace(1 / compound, years, n_payments)
+coupons = np.ones(n_payments) * coupon_rate
+amortizations = np.zeros(n_payments)
+amortizations[n_payments - 1] = 1
 description = np.asarray([times, coupons, amortizations, coupons + amortizations])
+
 
 rate = 0.1
 

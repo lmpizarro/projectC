@@ -174,12 +174,17 @@ class Ba37D:
         ).dt.date
         self._description['interes'] = self._description['interes'] / 2
 
+        self._description['times'] = (self._description['fecha'] - self.ref_date).dt.days / DAYS_IN_YEAR
+        self._description  = self._description[self._description['times'] > 0]
+
+        
     @property
     def description(self):
         return self._description
 
 ba37 = Ba37D()
-print(ba37.description.sum())
+print(ba37.description)
+exit()
 
 bond = BondSimulator(bullet.description)
 
