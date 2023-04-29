@@ -1,4 +1,39 @@
 import numpy as np
+import matplotlib.pyplot as plt
+
+DAYS_IN_A_YEAR = 365
+
+class RateGenerators:
+
+    def __init__(self, years: np.ndarray) -> None:
+        self._time = np.linspace(1/DAYS_IN_A_YEAR, years, DAYS_IN_A_YEAR*years, endpoint=False )
+
+    @property
+    def time(self) -> np.ndarray:
+        return self._time
+
+    def constant_rate(self, rate: float = .1) -> np.ndarray:
+
+        rates = np.ones(self.time.shape[0])*rate
+        return RateGenerators.discrete_to_continuous(rates=rates)
+
+    def exp_rate(self, rate: float=.1, speed: float = -4) -> np.ndarray:
+        rates = np.ones(self.time.shape[0])*rate
+        rates = np.exp(speed * self.time) * rates
+        if speed >= 0:
+            rates = (1 - np.exp(-speed * self.time)) * rates
+
+        return RateGenerators.discrete_to_continuous(rates=rates)
+
+    @staticmethod
+    def discrete_to_continuous(rates: np.ndarray) -> np.ndarray:
+        return compound * np.log(1 +  rates / compound)
+
+    def sin_rate(self, rate: float=.1, amplitude: float = .02) -> np.ndarray:
+        rates = np.sin(2*np.pi * self.time / self.time[-1])*amplitude + rate
+
+        return RateGenerators.discrete_to_continuous(rates=rates)
+
 
 years = 1
 compound = 4
@@ -14,36 +49,13 @@ description = np.asarray([times, coupons, amortizations])
 
 rate = .1
 
-def constant_rate(time, rate: float = .1):
+tg = RateGenerators(years=years)
 
-    rates = np.ones(time.shape[0])*rate
-    rcs = compound * np.log(1 +  rates / compound)
-    return rcs
-
-def exp_rate(time, rate: float=.1, speed: float = -4):
-    rates = np.ones(time.shape[0])*rate
-    rates = np.exp(speed * time) * rates
-    if speed >= 0:
-        rates = (1 - np.exp(-speed * time)) * rates
-
-    rcs = compound * np.log(1 +  rates / compound)
-    return rcs
-
-import matplotlib.pyplot as plt
-
-def sin_rate(time, rate: float=.1, amplitude: float = .02):
-    rates = np.sin(2*np.pi * time / time[-1])*amplitude + rate
-
-    rcs = compound * np.log(1 +  rates / compound)
-    return rcs
-
-
-time = np.linspace(1/365, years, 365*years, endpoint=False )
-rcs = sin_rate(time=time)
-rcs_ = exp_rate(time=time)
-npvs = np.zeros(time.shape)
-for i in range(time.shape[0]):
-    remaining = description[0] - time[i]
+rcs = tg.sin_rate()
+rcs_ = tg.exp_rate()
+npvs = np.zeros(tg.time.shape)
+for i in range(tg.time.shape[0]):
+    remaining = description[0] - tg.time[i]
     mask = np.where( remaining <= 0, 0, 1)
 
     description = mask * description
@@ -55,5 +67,6 @@ plt.plot(npvs)
 plt.show()
 plt.plot(rcs)
 plt.show()
+
 
 
