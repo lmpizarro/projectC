@@ -64,6 +64,7 @@ def variables_bcra(tipo="cer", desde="2016-04-20"):
     df_cer.rename(columns={"Valor": tipo}, inplace=True)
     return df_cer
 
+
 def test_ccl():
     import matplotlib.pyplot as plt
 
@@ -76,5 +77,6 @@ def test_ccl():
     plt.plot(df_cer)
     plt.show()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     variables_bcra()

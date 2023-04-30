@@ -4,6 +4,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
+
 class USBonds:
     def __init__(self, year: int = 2023) -> None:
         self.year = year
@@ -49,8 +50,8 @@ class USBonds:
         string_term_to_days_term = {r: spliter(r) for r in string_terms}
         days_term = string_term_to_days_term.values()
         treas_df.rename(columns=string_term_to_days_term, inplace=True)
-        treas_df['mean'] = treas_df[days_term].mean(axis=1)
-        treas_df.set_index('Date', inplace=True)
+        treas_df["mean"] = treas_df[days_term].mean(axis=1)
+        treas_df.set_index("Date", inplace=True)
 
         return treas_df
 
@@ -59,18 +60,16 @@ class USBonds:
         if self.year != today_year:
             self.year = today_year
             self.yield_curve = self.treasury_yield_curve()
-        return self.yield_curve['mean'].iloc[-1]
+        return self.yield_curve["mean"].iloc[-1]
 
     def last_curve_points(self):
-
         terms = np.array(list(self.yield_curve.keys())[0:-1])
         rates = np.array(list(self.yield_curve.tail().iloc[-1])[0:-1])
 
         return terms, rates
 
 
-if __name__ == '__main__':
-
+if __name__ == "__main__":
     usbond = USBonds()
     df_treas = usbond.yield_curve
     print(df_treas.tail())
@@ -85,10 +84,8 @@ if __name__ == '__main__':
 
     import matplotlib.pyplot as plt
 
-    plt.plot(df_treas['mean'])
+    plt.plot(df_treas["mean"])
     plt.show()
 
     plt.plot(terms, rates)
     plt.show()
-
-
