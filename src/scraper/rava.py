@@ -24,15 +24,51 @@ def scrap_cedear_rava():
     table = soup.find("main").find("cedears-p")
 
     body = json.loads(table.attrs[":datos"])["body"]
-    
+
     return [b["simbolo"] for b in body]
 
-if __name__ == '__main__':
-    result = scrap_bonos_rava('TX28')
+
+def cash_flow(flujo, laminas: int = 1000):
+    today = datetime.now()
+    flujo.fillna(0, inplace=True)
+    flujo["fecha"] = pd.to_datetime(flujo["fecha"], format="%Y-%m-%d")
+    flujo["acumulado"] = flujo.cupon.cumsum()
+    flujo_inicial = -flujo.acumulado.iloc[0]
+    flujo["cupon_precio"] = flujo.cupon / flujo_inicial
+    flujo["acumu_precio"] = flujo.acumulado / flujo_inicial
+    flujo["dias_cupon"] = (flujo.fecha - today).dt.days
+
+    return flujo
+
+
+def test():
+    res = scrap_bonos_rava("gd29")
+
+    coti_hist = pd.DataFrame(res["coti_hist"])
+
+    print(coti_hist.head())
+    flujo = pd.DataFrame(res["flujofondos"]["flujofondos"])
+
+    dolar = res["flujofondos"]["dolar"]
+    tir = res["flujofondos"]["tir"]
+    duration = res["flujofondos"]["duration"]
+
+    cash_flow(flujo)
+    print(res.keys())
+
+    print(res["cotizaciones"][0])
+
+    print(res["cuad_tecnico"])
+
+
+if __name__ == "__main__":
+    result = scrap_bonos_rava("TX28")
     coti_hist = pd.DataFrame(result["coti_hist"])
 
     print(coti_hist)
 
-    cedears  = scrap_cedear_rava()
+    cedears = scrap_cedear_rava()
 
     print(cedears)
+
+    test()

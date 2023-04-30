@@ -71,8 +71,6 @@ def test01():
     # plt.show()
 
 
-
-
 def ccl_gap():
     tickers = ["GGAL", "GGAL.BA", "AAPL.BA", "AAPL", "ARS=X"]
     df_close = yf.download(tickers, start="2012-04-20", auto_adjust=True)["Close"]

@@ -7,7 +7,7 @@ urls = {
     "bonos_rava": "https://www.rava.com/perfil",
     "bonistas_com": "https://bonistas.com",
     "treasury_yield_curve": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_yield_curve&field_tdr_date_value=",
-    "treasury_bill_rates": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_bill_rates&field_tdr_date_value="
+    "treasury_bill_rates": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_bill_rates&field_tdr_date_value=",
 }
 
 
