@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 import pandas as pd
 
-DAYS_IN_YEAR = 365
+DAYS_IN_YEAR = 360
 
 def npv_time(description: np.ndarray, time: np.ndarray, rates: np.ndarray, indx: int) -> float:
     remaining = description[0] - time[indx]
@@ -167,12 +167,12 @@ import pandas as pd
 class Ba37D:
     def __init__(
         self,
-        csv_name: str = "ba37d.csv",
+        csv_name: str = "ae38d.csv",
         ref_date: date = datetime.now().date(),
         value=20,
     ) -> None:
         self.ref_date = ref_date
-        self.compound = 2
+        self.compound = 1
         self._description = pd.read_csv(csv_name, sep=",")[
             ["fecha", "interes", "amort"]
         ]

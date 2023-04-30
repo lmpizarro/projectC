@@ -1,8 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from sim_bonds import npv_time
+from sim_bonds import Ba37D
 
-DAYS_IN_A_YEAR = 365
+DAYS_IN_A_YEAR = 360
 
 
 class RateGenerators:
@@ -52,21 +53,25 @@ class RateGenerators:
             rates=rates, compound=self.compound
         )
 
+class Bullet:
+    def __init__(self, maturity:int = 2, compound:int=2, nominal_rate:float=.1) -> None:
 
-years = 2
-compound = 4
-year_rate = 0.1
+        self.maturity = maturity
+        self.compound = compound
+        self.nominal_rate = nominal_rate
+        self.n_payments = maturity * compound
+        self.coupon_rate = nominal_rate / compound
 
-n_payments = years * compound
-coupon_rate = year_rate / compound
+        times = np.linspace(1 / compound, self.maturity, self.n_payments)
+        coupons = np.ones(self.n_payments) * self.coupon_rate
+        amortizations = np.zeros(self.n_payments)
+        amortizations[self.n_payments - 1] = 1
+        self.np_description = np.asarray([times, coupons, amortizations, coupons + amortizations])
 
-times = np.linspace(1 / compound, years, n_payments)
-coupons = np.ones(n_payments) * coupon_rate
-amortizations = np.zeros(n_payments)
-amortizations[n_payments - 1] = 1
-description = np.asarray([times, coupons, amortizations, coupons + amortizations])
-from sim_bonds import Ba37D
-bond = Ba37D()
+
+
+bond = Bullet()
+bond_ = Ba37D()
 description = bond.np_description
 years = bond.maturity
 compound = bond.compound
@@ -74,9 +79,9 @@ tg = RateGenerators(years=years, compound=compound)
 
 rcs = tg.sin_rate(cycles=2, rate=0.025, amplitude=0.01)
 rcs_ = tg.exp_rate()
-rcs = tg.constant_rate(rate=0.35)
+rcs = tg.constant_rate(rate=0.1)
 
-print(bond.np_description)
+print(description)
 
 
 
@@ -86,7 +91,7 @@ npvs = np.asarray(
         for i in range(tg.time.shape[0])
     ]
 )
-
+print(npvs[0])
 plt.plot(npvs)
 plt.show()
 plt.plot(RateGenerators.continuous_to_discrete(rcs, compound=compound))
