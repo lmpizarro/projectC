@@ -46,8 +46,6 @@ class FetchAsync:
 def get_urls(tickers: list):
     return [f'https://finviz.com/quote.ashx?t={ticker}' for ticker in tickers]
 
-
-
 def get_soups(responses):
     soups = {}
     for url in responses:
