@@ -71,7 +71,7 @@ class Bullet:
 
 
 bond = Bullet()
-bond_ = Ba37D()
+bond = Ba37D()
 description = bond.np_description
 years = bond.maturity
 compound = bond.compound
