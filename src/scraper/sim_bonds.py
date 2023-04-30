@@ -10,6 +10,12 @@ import pandas as pd
 
 DAYS_IN_YEAR = 365
 
+def npv_time(description: np.ndarray, time: np.ndarray, rates: np.ndarray, indx: int) -> float:
+    remaining = description[0] - time[indx]
+    description = np.where(remaining <= 0, 0, 1) * description
+    npv = np.exp(-remaining * rates[indx]) * description[3]
+    return npv.sum()
+
 
 class BondSimulator:
     def __init__(
@@ -173,7 +179,6 @@ class Ba37D:
         self._description["fecha"] = pd.to_datetime(
             self._description["fecha"], format="%d/%m/%Y"
         ).dt.date
-        self._description["interes"] = self._description["interes"] / 2
 
         self._description["times"] = (
             self._description["fecha"] - self.ref_date

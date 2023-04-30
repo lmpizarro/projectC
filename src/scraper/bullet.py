@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from sim_bonds import npv_time
 
 DAYS_IN_A_YEAR = 365
 
@@ -21,9 +22,10 @@ class RateGenerators:
 
     def constant_rate(self, rate: float = 0.1) -> np.ndarray:
         rates = np.ones(self.time.shape[0]) * rate
-        return RateGenerators.discrete_to_continuous(
+        rates = RateGenerators.discrete_to_continuous(
             rates=rates, compound=self.compound
         )
+        return rates
 
     def exp_rate(self, rate: float = 0.1, speed: float = -4) -> np.ndarray:
         rates = np.ones(self.time.shape[0]) * rate
@@ -53,7 +55,7 @@ class RateGenerators:
 
 years = 2
 compound = 4
-year_rate = 0.05
+year_rate = 0.1
 
 n_payments = years * compound
 coupon_rate = year_rate / compound
@@ -70,16 +72,12 @@ years = bond.maturity
 compound = bond.compound
 tg = RateGenerators(years=years, compound=compound)
 
-rcs = tg.sin_rate(cycles=2, amplitude=0.01)
+rcs = tg.sin_rate(cycles=2, rate=0.025, amplitude=0.01)
 rcs_ = tg.exp_rate()
-rcs = tg.constant_rate()
+rcs = tg.constant_rate(rate=0.35)
 
+print(bond.np_description)
 
-def npv_time(description: np.ndarray, time: np.ndarray, rates: np.ndarray, indx: int) -> float:
-    remaining = description[0] - time[indx]
-    description = np.where(remaining <= 0, 0, 1) * description
-    npv = np.exp(-remaining * rates[indx]) * description[3]
-    return npv.sum()
 
 
 npvs = np.asarray(
