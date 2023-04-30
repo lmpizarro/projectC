@@ -75,15 +75,24 @@ bond = Ba37D()
 description = bond.np_description
 years = bond.maturity
 compound = bond.compound
+
 tg = RateGenerators(years=years, compound=compound)
 
-rcs = tg.sin_rate(cycles=2, rate=0.025, amplitude=0.01)
-rcs_ = tg.exp_rate()
-rcs = tg.constant_rate(rate=0.1)
+today_price = 21.52
+x_rate = np.linspace(0, 1, 1000)
+y_price = np.zeros(1000)
+for i, r in enumerate(x_rate):
+    rcs = tg.constant_rate(rate=r)
+    p = npv_time(description=description, time=tg.time[0:1], rates=rcs[0:1], indx=0)
 
-print(description)
+    y_price[i] = p
+    x_rate[i] = tg.continuous_to_discrete(rcs[0], compound=bond.compound)
 
 
+today_rate = x_rate[np.abs(y_price - today_price).argmin()]
+rcs = tg.constant_rate(rate=today_rate)
+
+print(today_rate, today_price)
 
 npvs = np.asarray(
     [
@@ -91,8 +100,9 @@ npvs = np.asarray(
         for i in range(tg.time.shape[0])
     ]
 )
-print(npvs[0])
+
 plt.plot(npvs)
 plt.show()
 plt.plot(RateGenerators.continuous_to_discrete(rcs, compound=compound))
 plt.show()
+

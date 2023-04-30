@@ -29,9 +29,6 @@ def scrap_cedear_rava():
     return symbolos
 
 
-import pandas as pd
-
-
 def dolares(tipo="CCL", desde="2020-04-20", hasta="2023-04-23"):
     if tipo == "MAY":
         # Mayorista ordenado de menor a mayor comienza 07 03 2013
@@ -273,23 +270,25 @@ def test_ccl():
     plt.plot(df_ccl.gap.rolling(200).mean())
     plt.show()
 
-import numpy as np
-usbond = USBonds()
-df_treas = usbond.yield_curve
-print(df_treas.tail())
-print(usbond.today_mean())
-terms, rates = usbond.last_curve_points()
+if __name__ == '__main__':
 
-daily_rates = rates / 365
-term_rates = daily_rates * terms
+    import numpy as np
+    usbond = USBonds()
+    df_treas = usbond.yield_curve
+    print(df_treas.tail())
+    print(usbond.today_mean())
+    terms, rates = usbond.last_curve_points()
 
-print(terms)
-print(rates)
+    daily_rates = rates / 365
+    term_rates = daily_rates * terms
 
-import matplotlib.pyplot as plt
+    print(terms)
+    print(rates)
 
-plt.plot(df_treas['mean'])
-plt.show()
+    import matplotlib.pyplot as plt
 
-plt.plot(terms, rates)
-plt.show()
+    plt.plot(df_treas['mean'])
+    plt.show()
+
+    plt.plot(terms, rates)
+    plt.show()

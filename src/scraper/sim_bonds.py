@@ -29,7 +29,7 @@ https://numpy.org/numpy-financial/latest/
 class Ba37D:
     def __init__(
         self,
-        csv_name: str = "ae38d.csv",
+        csv_name: str = "al30d.csv",
         ref_date: date = datetime.now().date(),
         value=20,
     ) -> None:

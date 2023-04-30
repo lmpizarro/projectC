@@ -238,5 +238,5 @@ def test01():
     print('\n')
     c = cedear_not_in_sp500(max_n=10)
     print(c.tail())
-
-test01()
+if __name__ == '__main__':
+    test01()

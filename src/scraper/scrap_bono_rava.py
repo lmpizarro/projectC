@@ -136,7 +136,7 @@ class Bono:
                     self.laminas * self.cash_flow[['cupon', 'renta', 'amortizacion']]
         self.cash_flow.acumulado = self.cash_flow.cupon.cumsum()
         mrg = pd.merge(self.cash_flow, composicion, on='fecha', suffixes=(f'_cf', f'_comp'))
-        
+
         return mrg
 
 
@@ -181,9 +181,9 @@ def bono_fluxs(**data):
 DRAW = False
 def test_pesos():
     duales = ['TDJ23', 'TDL23', 'TDS23', 'TV23', 'TV24']
-    txs =  ['TX23', 'T2X3', 'TX24', 'T2X4', 'TX25', 'TX26', 'TX28']
-    en_pesos = [('CUAP', 34), ('DICP', 34), ('DIP0', 34), ('PARP', 340),] 
-    en_dolar = [('AL41', 31+14), ('AL29', 135+181+27), ('AE38', 38 + 22), ('AL30', 33 + 20)] 
+    txs =  ['T2X3', 'TX24', 'T2X4', 'TX26', 'TX28']
+    en_pesos = [('CUAP', 34), ('DICP', 34), ('DIP0', 34), ('PARP', 340),]
+    en_dolar = [('AL41', 31+14), ('AL29', 135+181+27), ('AE38', 38 + 22), ('AL30', 33 + 20)]
     tasa_var = ['BA37D', 'BDC24', 'BDC28', 'PBA25']
     tasa_vat = ['TO26', 'TO23']
     total = 0
@@ -202,7 +202,7 @@ def test_pesos():
 
         # print(bono.cash_flow)
         # bono.invest(compound=False)
-        bono.compound()
+        # bono.compound()
         total += bono.total()
         duration += bono.total() * bono.duration
         print(bono)
