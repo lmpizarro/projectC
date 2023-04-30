@@ -24,13 +24,15 @@ def scrap_cedear_rava():
     table = soup.find("main").find("cedears-p")
 
     body = json.loads(table.attrs[":datos"])["body"]
-    symbolos = []
-    for b in body:
-        symbolos.append(b["simbolo"])
-    return symbolos
+    
+    return [b["simbolo"] for b in body]
 
 if __name__ == '__main__':
     result = scrap_bonos_rava('TX28')
     coti_hist = pd.DataFrame(result["coti_hist"])
 
     print(coti_hist)
+
+    cedears  = scrap_cedear_rava()
+
+    print(cedears)
