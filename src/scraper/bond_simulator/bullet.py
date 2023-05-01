@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from sim_bonds import npv_time
+from sim_bonds import npv_time, price_to_yield
 from sim_bonds import Ba37D
 
 DAYS_IN_A_YEAR = 360
@@ -78,7 +78,7 @@ compound = bond.compound
 
 tg = RateGenerators(years=years, compound=compound)
 
-today_price = 21.52
+today_price = 23.94
 x_rate = np.linspace(0, 1, 1000)
 y_price = np.zeros(1000)
 for i, r in enumerate(x_rate):
@@ -105,4 +105,13 @@ plt.plot(npvs)
 plt.show()
 plt.plot(RateGenerators.continuous_to_discrete(rcs, compound=compound))
 plt.show()
+
+rcs = tg.constant_rate(rate=today_rate)
+pty = price_to_yield(description=description, time=tg.time[0:1], rates=rcs[0:1], indx=0)
+
+D = pty/today_price
+
+MD = D /(1+ today_rate/2)
+
+print(MD)
 

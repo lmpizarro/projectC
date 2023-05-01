@@ -17,6 +17,14 @@ def npv_time(description: np.ndarray, time: np.ndarray, rates: np.ndarray, indx:
     npv = np.exp(-remaining * rates[indx]) * description[3]
     return npv.sum()
 
+def price_to_yield(description: np.ndarray, time: np.ndarray, rates: np.ndarray, indx: int) -> float:
+    remaining = description[0] - time[indx]
+    description = np.where(remaining <= 0, 0, 1) * description
+    npv = remaining * np.exp(-remaining * rates[indx]) * description[3]
+    return npv.sum()
+
+
+
 
 
 """
@@ -29,7 +37,7 @@ https://numpy.org/numpy-financial/latest/
 class Ba37D:
     def __init__(
         self,
-        csv_name: str = "al30d.csv",
+        csv_name: str = "al41d.csv",
         ref_date: date = datetime.now().date(),
         value=20,
     ) -> None:
