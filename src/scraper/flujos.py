@@ -3,29 +3,40 @@ import pandas as pd
 from rava import cash_flow, scrap_bonos_rava, coti_hist
 from collections import namedtuple
 
-Investment = namedtuple('Investment', 'ticker quantity')
+Investment = namedtuple("Investment", "ticker quantity")
 
 DRAW = False
 
 
 class Bono:
-    def __init__(self, ticker: str = None, laminas: int = 100) -> None:
+    def __init__(self, ticker: str = None, quantity: int = 100) -> None:
         self.ticker: str = ticker
+        self.quantity: int = quantity
         self.history: pd.DataFrame = None
         self.cash_flow: pd.DataFrame = None
         self.tir: float = None
         self.duration = None
-        self.laminas: int = laminas
         self.precio: float = 0.0
 
     def dict(self):
         return self.__dict__
 
     def total(self):
-        return self.laminas * self.precio
+        return self.quantity * self.precio
 
     def __str__(self) -> str:
-        return f"{self.ticker} tir {self.tir} dur {self.duration} precio {self.precio} lam {self.laminas} tot {self.total()}"
+        return f"{self.ticker} tir {self.tir} dur {self.duration} precio {self.precio} quantity {self.quantity} tot {self.total()}"
+
+    def summary(self) -> dict:
+        return {
+            "ticker": self.ticker,
+            "tir": self.tir,
+            "price": self.precio,
+            "quantity": self.quantity,
+            "total": self.total(),
+            "duration": self.duration,
+            "maturity": self.cash_flow.iloc[-1].years_to_coupon,
+        }
 
     def has_history(self):
         if (
@@ -38,7 +49,7 @@ class Bono:
 
     def compound(self):
         filtered = self.cash_flow[1:-1]
-        laminas = self.laminas
+        laminas = self.quantity
 
         composicion = []
         row = self.cash_flow.iloc[0]
@@ -47,7 +58,7 @@ class Bono:
                 "fecha": row.fecha,
                 "laminas_adic": 0,
                 "pago": 0,
-                "laminas": self.laminas,
+                "laminas": self.quantity,
                 "acumulado": row.cupon * laminas,
             }
         )
@@ -76,7 +87,7 @@ class Bono:
 
         composicion = pd.DataFrame(composicion)
         self.cash_flow[["cupon", "renta", "amortizacion"]] = (
-            self.laminas * self.cash_flow[["cupon", "renta", "amortizacion"]]
+            self.quantity * self.cash_flow[["cupon", "renta", "amortizacion"]]
         )
         self.cash_flow.acumulado = self.cash_flow.cupon.cumsum()
         mrg = pd.merge(
@@ -88,19 +99,18 @@ class Bono:
     def invest(self, compound=False):
         if not compound:
             self.cash_flow[["cupon", "renta", "amortizacion"]] = (
-                self.laminas * self.cash_flow[["cupon", "renta", "amortizacion"]]
+                self.quantity * self.cash_flow[["cupon", "renta", "amortizacion"]]
             )
             self.cash_flow.acumulado = self.cash_flow.cupon.cumsum()
         else:
             self.compound()
 
 
-def bono_fluxs(invest: Investment):
-    bono = Bono(invest.ticker, invest.quantity)
-
+def bond_cash_flow(invest: Investment):
     res = scrap_bonos_rava(invest.ticker)
     hist_gd = coti_hist(res)
 
+    bono = Bono(invest.ticker, invest.quantity)
     bono.history = hist_gd
 
     try:
@@ -109,6 +119,7 @@ def bono_fluxs(invest: Investment):
             flujo = cash_flow(flujo)
             bono.cash_flow = flujo
             bono.precio = -1 * bono.cash_flow.iloc[0].cupon
+            exit()
     except:
         pass
 
@@ -131,24 +142,22 @@ DRAW = False
     tasa_vat = ["TO26", "TO23"]
 """
 
+
 def test_pesos():
     en_pesos = [
-        Investment("CUAP", 34),
-        Investment("DICP", 34),
-        Investment("DIP0", 34),
-        Investment("PARP", 340),
+        Investment("CUAP", 100),
+        Investment("DICP", 100),
+        Investment("DIP0", 100),
+        Investment("PARP", 100),
     ]
     en_dolar = [
-        Investment("AL41", 45),
-        Investment("AL29", 343),
-        Investment("AE38", 60),
-        Investment("AL30", 53),
+        Investment("al29d", 1),
+        Investment("gd29d", 1),
     ]
-    total = 0
-    duration = 0
+
+    summary = []
     for investment in en_dolar:
-        print(investment)
-        bono = bono_fluxs(invest=investment)
+        bono = bond_cash_flow(invest=investment)
 
         if DRAW:
             plt.title(bono.ticker)
@@ -157,14 +166,17 @@ def test_pesos():
             else:
                 return
             plt.show()
-
-        print(bono.cash_flow)
         bono.invest(compound=False)
         bono.compound()
-        total += bono.total()
-        duration += bono.total() * bono.duration
-        print(bono)
-    print(total, duration / total)
+
+        print(bono.cash_flow)
+        print(investment)
+        summary.append(bono.summary())
+    summary = pd.DataFrame(summary)
+    summary["dur_to_mat"] = summary["duration"] / summary["maturity"]
+    summary["Duration"] = summary["duration"] * summary["total"]
+    print(summary)
+    print(summary.total.sum(), summary.Duration.sum() / summary.total.sum())
 
 
 if __name__ == "__main__":

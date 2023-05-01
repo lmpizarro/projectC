@@ -6,6 +6,11 @@ import pandas as pd
 
 from config import urls
 
+DAYS_IN_A_YEAR = 360
+
+def coti_hist(res):
+    return pd.DataFrame(res["coti_hist"])
+
 
 def scrap_bonos_rava(especie):
     url = f"{urls['bonos_rava']}/{especie}"
@@ -28,7 +33,7 @@ def scrap_cedear_rava():
     return [b["simbolo"] for b in body]
 
 
-def cash_flow(flujo, laminas: int = 1000):
+def cash_flow(flujo):
     today = datetime.now()
     flujo.fillna(0, inplace=True)
     flujo["fecha"] = pd.to_datetime(flujo["fecha"], format="%Y-%m-%d")
@@ -37,6 +42,7 @@ def cash_flow(flujo, laminas: int = 1000):
     flujo["cupon_precio"] = flujo.cupon / flujo_inicial
     flujo["acumu_precio"] = flujo.acumulado / flujo_inicial
     flujo["dias_cupon"] = (flujo.fecha - today).dt.days
+    flujo['years_to_coupon'] = flujo["dias_cupon"] / DAYS_IN_A_YEAR
 
     return flujo
 
@@ -63,7 +69,7 @@ def test():
 
 if __name__ == "__main__":
     result = scrap_bonos_rava("TX28")
-    coti_hist = pd.DataFrame(result["coti_hist"])
+    coti_hist = coti_hist(result)
 
     print(coti_hist)
 

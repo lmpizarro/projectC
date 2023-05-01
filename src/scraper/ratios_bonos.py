@@ -3,7 +3,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-
 def ratio_bond_usd(year: str = 29):
     hist_gd = coti_hist(scrap_bonos_rava(f"gd{year}"))
     key_bond = f"al{year}" if year != 38 else f"ae{year}"
@@ -44,5 +43,5 @@ def ratios_bonos_dolar():
         ratio_bond_usd(y)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     ratios_bonos_dolar()
