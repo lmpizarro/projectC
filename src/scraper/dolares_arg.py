@@ -72,12 +72,14 @@ def test01():
 
 
 def ccl_gap():
-    tickers = ["GGAL", "GGAL.BA", "AAPL.BA", "AAPL", "ARS=X"]
+    tickers = ["GGAL", "GGAL.BA", "AAPL.BA", "AAPL", "ARS=X", "M.BA"]
     df_close = yf.download(tickers, start="2012-04-20", auto_adjust=True)["Close"]
     df_close["ccl1"] = 10 * df_close["GGAL.BA"] / df_close["GGAL"]
     df_close["ccl2"] = 10 * df_close["AAPL.BA"] / df_close["AAPL"]
     df_close["ccl"] = 0.5 * (df_close.ccl1 + df_close.ccl2)
-    df_close = df_close[["ccl", "ARS=X"]]
+    # Merval en CCL
+    df_close["m_ccl"] = df_close["M.BA"] / df_close["ccl"]
+    df_close = df_close[["ccl", "ARS=X", "m_ccl"]]
     df_close["gap"] = (df_close["ccl"] - df_close["ARS=X"]) / df_close["ARS=X"]
     df_close.dropna(inplace=True)
 
@@ -94,6 +96,8 @@ def test_ccl():
 
     plt.plot(df_ccl.gap)
     plt.plot(df_ccl.gap.rolling(200).mean())
+    plt.show()
+    plt.plot(df_ccl["m_ccl"])
     plt.show()
 
 

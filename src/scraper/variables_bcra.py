@@ -2,37 +2,38 @@ import requests
 import pandas as pd
 from datetime import datetime
 
+settings = {
+    "cer": {"Serie": "3540", "Detalle": "CER (Base 2.2.2002=1)"},
+    "badlar": {
+        "Serie": "7935",
+        "Detalle": "BADLAR en pesos de bancos privados (en  e.a.)",
+    },
+    "TEAPolMon": {
+        "Serie": "7936",
+        "Detalle": "Tasa de Política Monetaria (en  e.a.)",
+    },
+    "mayorista": {
+        "Serie": "272",
+        "Detalle": "Tipo de Cambio Mayorista ($ por US$) Comunicación A 3500 - Referencia",
+    },
+    "TEAPF": {
+        "Serie": "7939",
+        "Detalle": "Tasa mínima para plazos fijos de personas humanas hasta $10 millones (en  e.a. para depósitos a 30 días)",
+    },
+    "inflacion": {"Serie": "7931", "Detalle": "Inflación mensual (variación en )"},
+    "inflacionIA": {
+        "Serie": "7932",
+        "Detalle": "Inflación interanual (variación en i.a.)",
+    },
+    "reservas": {
+        "Serie": "246",
+        "Detalle": "Reservas Internacionales del BCRA (en millones de dólares - cifras provisorias sujetas a cambio de valuación)",
+    },
+}
 
 def variables_bcra(tipo="cer", desde="2016-04-20"):
     url = "https://www.bcra.gob.ar/PublicacionesEstadisticas/Principales_variables_datos.asp"
-    settings = {
-        "cer": {"Serie": "3540", "Detalle": "CER (Base 2.2.2002=1)"},
-        "badlar": {
-            "Serie": "7935",
-            "Detalle": "BADLAR en pesos de bancos privados (en  e.a.)",
-        },
-        "TEAPolMon": {
-            "Serie": "7936",
-            "Detalle": "Tasa de Política Monetaria (en  e.a.)",
-        },
-        "mayorista": {
-            "Serie": "272",
-            "Detalle": "Tipo de Cambio Mayorista ($ por US$) Comunicación A 3500 - Referencia",
-        },
-        "TEAPF": {
-            "Serie": "7939",
-            "Detalle": "Tasa mínima para plazos fijos de personas humanas hasta $10 millones (en  e.a. para depósitos a 30 días)",
-        },
-        "inflacion": {"Serie": "7931", "Detalle": "Inflación mensual (variación en )"},
-        "inflacionIA": {
-            "Serie": "7932",
-            "Detalle": "Inflación interanual (variación en i.a.)",
-        },
-        "reservas": {
-            "Serie": "246",
-            "Detalle": "Reservas Internacionales del BCRA (en millones de dólares - cifras provisorias sujetas a cambio de valuación)",
-        },
-    }
+
     today = datetime.now().date()
     month = (
         f"0{today.month}" if today.month >= 1 and today.month <= 9 else f"{today.month}"
