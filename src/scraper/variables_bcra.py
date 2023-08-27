@@ -72,8 +72,7 @@ def variables_bcra(tipo="cer", desde="2016-04-01"):
     return df_cer
 
 
-def dolar_mep(desde="2020-04-20", hasta=None):
-    from datetime import datetime
+def dolar_mep(desde="2015-01-01", hasta=None):
 
     if not hasta:
         hasta = datetime.now().date().strftime("%Y-%m-%d")
@@ -98,7 +97,7 @@ def dolar_mep(desde="2020-04-20", hasta=None):
     return df_dolar
 
 
-def ccl(start="2015-01-01"):
+def dolar_ccl(start="2015-01-01"):
     tickers = ["GGAL", "GGAL.BA", "AAPL.BA", "AAPL", "ARS=X", "YPF", "YPFD.BA"]
     df_close = yf.download(tickers, start=start, auto_adjust=True)["Close"]
     df_close["cclgal"] = 10 * df_close["GGAL.BA"] / df_close["GGAL"]
@@ -110,7 +109,7 @@ def ccl(start="2015-01-01"):
 
     return df_close
 
-def merval(start="2015-01-01"):
+def indice_merval(start="2015-01-01"):
     # log_return = np.log(vfiax_monthly.open / vfiax_monthly.open.shift())
 
     tickers = ["ARS=X", "M.BA"]
@@ -134,29 +133,28 @@ def merval(start="2015-01-01"):
 
 
 if __name__ == "__main__":
-    dfInflation = variables_bcra(tipo="inflacion", desde="2015-01-01")
     dfCER = variables_bcra(tipo="cer", desde="2015-01-01")
     dfMayorista = variables_bcra(tipo="mayorista", desde="2015-01-01")
-    dfMerval = merval()
-    dfCcl = ccl()
+    dfMerval = indice_merval()
+    dfCcl = dolar_ccl()
+    dfMep = dolar_mep()
 
     print(dfCcl.tail())
-
     print(dfMerval.tail())
-
-    print(dfInflation.tail(), dfInflation.shape)
-
     print(dfCER.tail(), dfCER.shape)
-
     print(dfMayorista.tail(), dfMayorista.shape)
+
 
     dfMayCer = pd.merge(dfMayorista, dfCER, left_index=True, right_index=True)
     dfMayCer = pd.merge(dfMayCer, dfMerval, left_index=True, right_index=True)
     dfMayCer = pd.merge(dfMayCer, dfCcl, left_index=True, right_index=True)
+    dfMayCer = pd.merge(dfMayCer, dfMep, left_index=True, right_index=True)
+    dfMayCer['MerCcl'] = dfMayCer['M.BA'] / dfMayCer['ccl']
+
     dfMayCer['rMayCer'] = dfMayCer['mayorista'] / dfMayCer['cer']
     dfMayCer['rCclCer'] = dfMayCer['ccl'] / dfMayCer['cer']
+
     dfMayCer['rMerARSCer'] = dfMayCer['M.BA'] / dfMayCer['cer']
-    dfMayCer['MerCcl'] = dfMayCer['M.BA'] / dfMayCer['ccl']
     dfMayCer['rMerCclCer'] = dfMayCer['MerCcl'] / dfMayCer['cer']
     dfMayCer = dfMayCer.truncate(before="2019-12-30") 
     print(dfMayCer.keys())
@@ -181,3 +179,14 @@ if __name__ == "__main__":
     axis[1].axhline(y=dfMayCer.rMerCclCer.mean(), color = 'y')
     axis[1].set_title("MervalCCL/CER")
     plt.show()
+
+    dfMepCcl = pd.merge(dfMep, dfCcl, left_index=True, right_index=True)
+    figure, axis = plt.subplots(2, 1)
+    axis[0].plot(dfMepCcl.mep)
+    axis[0].plot(dfMepCcl.ccl)
+
+    axis[1].plot(dfMepCcl.ccl/dfMepCcl.mep)
+    axis[1].axhline(y=(dfMepCcl.ccl/dfMepCcl.mep).mean(), color = 'y')
+    plt.show()
+
+
